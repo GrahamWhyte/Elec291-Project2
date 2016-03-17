@@ -2,6 +2,7 @@
 //  P2.0 and P2.1.  The program allows the user to enter a frequency.
 //  Copyright (c) 2010-2015 Jesus Calvino-Fraga
 //  ~C51~
+// Trying this
 
 #include <C8051F38x.h>
 #include <stdlib.h>
