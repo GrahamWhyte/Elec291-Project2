@@ -3,6 +3,7 @@
 //  Copyright (c) 2010-2015 Jesus Calvino-Fraga
 //  ~C51~
 // Trying this
+//Branch_merge test
 
 #include <C8051F38x.h>
 #include <stdlib.h>
