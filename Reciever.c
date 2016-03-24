@@ -114,7 +114,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	SFRPAGE=0xf;
 	
 	TF5H = 0; // Clear Timer5 interrupt flag
-	if(b<33){
+	if(b<32){
 		signal[32-b] = SIGNAL_IN;
 		b++;
 		//restore spf page
@@ -249,9 +249,12 @@ void main(void){
 	EA = 1;
 	
 	
+	
 	while(1)
 	{
-		
+		SFRPAGE = 0xF;
+		EIE2 |= ET5;
+		SFRPAGE = 0;
 		//wait for the first bit to come in
 		while(b == MODE_BIT);
 		//double check this logic
@@ -262,9 +265,7 @@ void main(void){
 		{
 			
 			//enable timer 5
-			SFRPAGE = 0xF;
-			EIE2 |= ET5;
-			SFRPAGE = 0;
+			
 			while(b != DIRECTION); 
 			//call a function to interpret that bit of the signal
             direction(signal[DIRECTION], signal[DIRECTION+1]); 
@@ -288,9 +289,7 @@ void main(void){
 		{
 			
 			//disable timer 5
-			SFRPAGE = 0xF;
-			EIE2 &= 0b1101_1111;
-			SFRPAGE = 0;
+			
 		}
 	}
 }
