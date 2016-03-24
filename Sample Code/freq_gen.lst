@@ -1,0 +1,720 @@
+0000              1   ;--------------------------------------------------------
+0000              2   ; File Created by C51
+0000              3   ; Version 1.0.0 #1069 (Apr 23 2015) (MSVC)
+0000              4   ; This file was generated Tue Mar 22 13:16:21 2016
+0000              5   ;--------------------------------------------------------
+                  5   $name freq_gen
+                  6   $optc51 --model-small
+0000              8            R_DSEG    segment data
+0000              9            R_CSEG    segment code
+0000             10            R_BSEG    segment bit
+0000             11            R_XSEG    segment xdata
+0000             12            R_PSEG    segment xdata
+0000             13            R_ISEG    segment idata
+0000             14            R_OSEG    segment data overlay
+0000             15            BIT_BANK  segment data overlay
+0000             16            R_HOME    segment code
+0000             17            R_GSINIT  segment code
+0000             18            R_IXSEG   segment xdata
+0000             19            R_CONST   segment code
+0000             20            R_XINIT   segment code
+0000             21            R_DINIT   segment code
+0000             22   
+0000             23   ;--------------------------------------------------------
+0000             24   ; Public variables in this module
+0000             25   ;--------------------------------------------------------
+0000             26            public _main
+0000             27            public _Timer2_ISR
+0000             28            public __c51_external_startup
+0000             29            public _pwm_count
+0000             30   ;--------------------------------------------------------
+0000             31   ; Special Function Registers
+0000             32   ;--------------------------------------------------------
+0000             33   _P0             DATA 0x80
+0000             34   _SP             DATA 0x81
+0000             35   _DPL            DATA 0x82
+0000             36   _DPH            DATA 0x83
+0000             37   _EMI0TC         DATA 0x84
+0000             38   _EMI0CF         DATA 0x85
+0000             39   _OSCLCN         DATA 0x86
+0000             40   _PCON           DATA 0x87
+0000             41   _TCON           DATA 0x88
+0000             42   _TMOD           DATA 0x89
+0000             43   _TL0            DATA 0x8a
+0000             44   _TL1            DATA 0x8b
+0000             45   _TH0            DATA 0x8c
+0000             46   _TH1            DATA 0x8d
+0000             47   _CKCON          DATA 0x8e
+0000             48   _PSCTL          DATA 0x8f
+0000             49   _P1             DATA 0x90
+0000             50   _TMR3CN         DATA 0x91
+0000             51   _TMR4CN         DATA 0x91
+0000             52   _TMR3RLL        DATA 0x92
+0000             53   _TMR4RLL        DATA 0x92
+0000             54   _TMR3RLH        DATA 0x93
+0000             55   _TMR4RLH        DATA 0x93
+0000             56   _TMR3L          DATA 0x94
+0000             57   _TMR4L          DATA 0x94
+0000             58   _TMR3H          DATA 0x95
+0000             59   _TMR4H          DATA 0x95
+0000             60   _USB0ADR        DATA 0x96
+0000             61   _USB0DAT        DATA 0x97
+0000             62   _SCON           DATA 0x98
+0000             63   _SCON0          DATA 0x98
+0000             64   _SBUF           DATA 0x99
+0000             65   _SBUF0          DATA 0x99
+0000             66   _CPT1CN         DATA 0x9a
+0000             67   _CPT0CN         DATA 0x9b
+0000             68   _CPT1MD         DATA 0x9c
+0000             69   _CPT0MD         DATA 0x9d
+0000             70   _CPT1MX         DATA 0x9e
+0000             71   _CPT0MX         DATA 0x9f
+0000             72   _P2             DATA 0xa0
+0000             73   _SPI0CFG        DATA 0xa1
+0000             74   _SPI0CKR        DATA 0xa2
+0000             75   _SPI0DAT        DATA 0xa3
+0000             76   _P0MDOUT        DATA 0xa4
+0000             77   _P1MDOUT        DATA 0xa5
+0000             78   _P2MDOUT        DATA 0xa6
+0000             79   _P3MDOUT        DATA 0xa7
+0000             80   _IE             DATA 0xa8
+0000             81   _CLKSEL         DATA 0xa9
+0000             82   _EMI0CN         DATA 0xaa
+0000             83   __XPAGE         DATA 0xaa
+0000             84   _SBCON1         DATA 0xac
+0000             85   _P4MDOUT        DATA 0xae
+0000             86   _PFE0CN         DATA 0xaf
+0000             87   _P3             DATA 0xb0
+0000             88   _OSCXCN         DATA 0xb1
+0000             89   _OSCICN         DATA 0xb2
+0000             90   _OSCICL         DATA 0xb3
+0000             91   _SBRLL1         DATA 0xb4
+0000             92   _SBRLH1         DATA 0xb5
+0000             93   _FLSCL          DATA 0xb6
+0000             94   _FLKEY          DATA 0xb7
+0000             95   _IP             DATA 0xb8
+0000             96   _CLKMUL         DATA 0xb9
+0000             97   _SMBTC          DATA 0xb9
+0000             98   _AMX0N          DATA 0xba
+0000             99   _AMX0P          DATA 0xbb
+0000            100   _ADC0CF         DATA 0xbc
+0000            101   _ADC0L          DATA 0xbd
+0000            102   _ADC0H          DATA 0xbe
+0000            103   _SFRPAGE        DATA 0xbf
+0000            104   _SMB0CN         DATA 0xc0
+0000            105   _SMB1CN         DATA 0xc0
+0000            106   _SMB0CF         DATA 0xc1
+0000            107   _SMB1CF         DATA 0xc1
+0000            108   _SMB0DAT        DATA 0xc2
+0000            109   _SMB1DAT        DATA 0xc2
+0000            110   _ADC0GTL        DATA 0xc3
+0000            111   _ADC0GTH        DATA 0xc4
+0000            112   _ADC0LTL        DATA 0xc5
+0000            113   _ADC0LTH        DATA 0xc6
+0000            114   _P4             DATA 0xc7
+0000            115   _TMR2CN         DATA 0xc8
+0000            116   _TMR5CN         DATA 0xc8
+0000            117   _REG01CN        DATA 0xc9
+0000            118   _TMR2RLL        DATA 0xca
+0000            119   _TMR5RLL        DATA 0xca
+0000            120   _TMR2RLH        DATA 0xcb
+0000            121   _TMR5RLH        DATA 0xcb
+0000            122   _TMR2L          DATA 0xcc
+0000            123   _TMR5L          DATA 0xcc
+0000            124   _TMR2H          DATA 0xcd
+0000            125   _TMR5H          DATA 0xcd
+0000            126   _SMB0ADM        DATA 0xce
+0000            127   _SMB1ADM        DATA 0xce
+0000            128   _SMB0ADR        DATA 0xcf
+0000            129   _SMB1ADR        DATA 0xcf
+0000            130   _PSW            DATA 0xd0
+0000            131   _REF0CN         DATA 0xd1
+0000            132   _SCON1          DATA 0xd2
+0000            133   _SBUF1          DATA 0xd3
+0000            134   _P0SKIP         DATA 0xd4
+0000            135   _P1SKIP         DATA 0xd5
+0000            136   _P2SKIP         DATA 0xd6
+0000            137   _USB0XCN        DATA 0xd7
+0000            138   _PCA0CN         DATA 0xd8
+0000            139   _PCA0MD         DATA 0xd9
+0000            140   _PCA0CPM0       DATA 0xda
+0000            141   _PCA0CPM1       DATA 0xdb
+0000            142   _PCA0CPM2       DATA 0xdc
+0000            143   _PCA0CPM3       DATA 0xdd
+0000            144   _PCA0CPM4       DATA 0xde
+0000            145   _P3SKIP         DATA 0xdf
+0000            146   _ACC            DATA 0xe0
+0000            147   _XBR0           DATA 0xe1
+0000            148   _XBR1           DATA 0xe2
+0000            149   _XBR2           DATA 0xe3
+0000            150   _IT01CF         DATA 0xe4
+0000            151   _CKCON1         DATA 0xe4
+0000            152   _SMOD1          DATA 0xe5
+0000            153   _EIE1           DATA 0xe6
+0000            154   _EIE2           DATA 0xe7
+0000            155   _ADC0CN         DATA 0xe8
+0000            156   _PCA0CPL1       DATA 0xe9
+0000            157   _PCA0CPH1       DATA 0xea
+0000            158   _PCA0CPL2       DATA 0xeb
+0000            159   _PCA0CPH2       DATA 0xec
+0000            160   _PCA0CPL3       DATA 0xed
+0000            161   _PCA0CPH3       DATA 0xee
+0000            162   _RSTSRC         DATA 0xef
+0000            163   _B              DATA 0xf0
+0000            164   _P0MDIN         DATA 0xf1
+0000            165   _P1MDIN         DATA 0xf2
+0000            166   _P2MDIN         DATA 0xf3
+0000            167   _P3MDIN         DATA 0xf4
+0000            168   _P4MDIN         DATA 0xf5
+0000            169   _EIP1           DATA 0xf6
+0000            170   _EIP2           DATA 0xf7
+0000            171   _SPI0CN         DATA 0xf8
+0000            172   _PCA0L          DATA 0xf9
+0000            173   _PCA0H          DATA 0xfa
+0000            174   _PCA0CPL0       DATA 0xfb
+0000            175   _PCA0CPH0       DATA 0xfc
+0000            176   _PCA0CPL4       DATA 0xfd
+0000            177   _PCA0CPH4       DATA 0xfe
+0000            178   _VDM0CN         DATA 0xff
+0000            179   _DPTR           DATA 0x8382
+0000            180   _TMR2RL         DATA 0xcbca
+0000            181   _TMR3RL         DATA 0x9392
+0000            182   _TMR4RL         DATA 0x9392
+0000            183   _TMR5RL         DATA 0xcbca
+0000            184   _TMR2           DATA 0xcdcc
+0000            185   _TMR3           DATA 0x9594
+0000            186   _TMR4           DATA 0x9594
+0000            187   _TMR5           DATA 0xcdcc
+0000            188   _SBRL1          DATA 0xb5b4
+0000            189   _ADC0           DATA 0xbebd
+0000            190   _ADC0GT         DATA 0xc4c3
+0000            191   _ADC0LT         DATA 0xc6c5
+0000            192   _PCA0           DATA 0xfaf9
+0000            193   _PCA0CP1        DATA 0xeae9
+0000            194   _PCA0CP2        DATA 0xeceb
+0000            195   _PCA0CP3        DATA 0xeeed
+0000            196   _PCA0CP0        DATA 0xfcfb
+0000            197   _PCA0CP4        DATA 0xfefd
+0000            198   ;--------------------------------------------------------
+0000            199   ; special function bits
+0000            200   ;--------------------------------------------------------
+0000            201   _P0_0           BIT 0x80
+0000            202   _P0_1           BIT 0x81
+0000            203   _P0_2           BIT 0x82
+0000            204   _P0_3           BIT 0x83
+0000            205   _P0_4           BIT 0x84
+0000            206   _P0_5           BIT 0x85
+0000            207   _P0_6           BIT 0x86
+0000            208   _P0_7           BIT 0x87
+0000            209   _TF1            BIT 0x8f
+0000            210   _TR1            BIT 0x8e
+0000            211   _TF0            BIT 0x8d
+0000            212   _TR0            BIT 0x8c
+0000            213   _IE1            BIT 0x8b
+0000            214   _IT1            BIT 0x8a
+0000            215   _IE0            BIT 0x89
+0000            216   _IT0            BIT 0x88
+0000            217   _P1_0           BIT 0x90
+0000            218   _P1_1           BIT 0x91
+0000            219   _P1_2           BIT 0x92
+0000            220   _P1_3           BIT 0x93
+0000            221   _P1_4           BIT 0x94
+0000            222   _P1_5           BIT 0x95
+0000            223   _P1_6           BIT 0x96
+0000            224   _P1_7           BIT 0x97
+0000            225   _S0MODE         BIT 0x9f
+0000            226   _SCON0_6        BIT 0x9e
+0000            227   _MCE0           BIT 0x9d
+0000            228   _REN0           BIT 0x9c
+0000            229   _TB80           BIT 0x9b
+0000            230   _RB80           BIT 0x9a
+0000            231   _TI0            BIT 0x99
+0000            232   _RI0            BIT 0x98
+0000            233   _SCON_6         BIT 0x9e
+0000            234   _MCE            BIT 0x9d
+0000            235   _REN            BIT 0x9c
+0000            236   _TB8            BIT 0x9b
+0000            237   _RB8            BIT 0x9a
+0000            238   _TI             BIT 0x99
+0000            239   _RI             BIT 0x98
+0000            240   _P2_0           BIT 0xa0
+0000            241   _P2_1           BIT 0xa1
+0000            242   _P2_2           BIT 0xa2
+0000            243   _P2_3           BIT 0xa3
+0000            244   _P2_4           BIT 0xa4
+0000            245   _P2_5           BIT 0xa5
+0000            246   _P2_6           BIT 0xa6
+0000            247   _P2_7           BIT 0xa7
+0000            248   _EA             BIT 0xaf
+0000            249   _ESPI0          BIT 0xae
+0000            250   _ET2            BIT 0xad
+0000            251   _ES0            BIT 0xac
+0000            252   _ET1            BIT 0xab
+0000            253   _EX1            BIT 0xaa
+0000            254   _ET0            BIT 0xa9
+0000            255   _EX0            BIT 0xa8
+0000            256   _P3_0           BIT 0xb0
+0000            257   _P3_1           BIT 0xb1
+0000            258   _P3_2           BIT 0xb2
+0000            259   _P3_3           BIT 0xb3
+0000            260   _P3_4           BIT 0xb4
+0000            261   _P3_5           BIT 0xb5
+0000            262   _P3_6           BIT 0xb6
+0000            263   _P3_7           BIT 0xb7
+0000            264   _IP_7           BIT 0xbf
+0000            265   _PSPI0          BIT 0xbe
+0000            266   _PT2            BIT 0xbd
+0000            267   _PS0            BIT 0xbc
+0000            268   _PT1            BIT 0xbb
+0000            269   _PX1            BIT 0xba
+0000            270   _PT0            BIT 0xb9
+0000            271   _PX0            BIT 0xb8
+0000            272   _MASTER0        BIT 0xc7
+0000            273   _TXMODE0        BIT 0xc6
+0000            274   _STA0           BIT 0xc5
+0000            275   _STO0           BIT 0xc4
+0000            276   _ACKRQ0         BIT 0xc3
+0000            277   _ARBLOST0       BIT 0xc2
+0000            278   _ACK0           BIT 0xc1
+0000            279   _SI0            BIT 0xc0
+0000            280   _MASTER1        BIT 0xc7
+0000            281   _TXMODE1        BIT 0xc6
+0000            282   _STA1           BIT 0xc5
+0000            283   _STO1           BIT 0xc4
+0000            284   _ACKRQ1         BIT 0xc3
+0000            285   _ARBLOST1       BIT 0xc2
+0000            286   _ACK1           BIT 0xc1
+0000            287   _SI1            BIT 0xc0
+0000            288   _TF2            BIT 0xcf
+0000            289   _TF2H           BIT 0xcf
+0000            290   _TF2L           BIT 0xce
+0000            291   _TF2LEN         BIT 0xcd
+0000            292   _TF2CEN         BIT 0xcc
+0000            293   _T2SPLIT        BIT 0xcb
+0000            294   _TR2            BIT 0xca
+0000            295   _T2CSS          BIT 0xc9
+0000            296   _T2XCLK         BIT 0xc8
+0000            297   _TF5H           BIT 0xcf
+0000            298   _TF5L           BIT 0xce
+0000            299   _TF5LEN         BIT 0xcd
+0000            300   _TMR5CN_4       BIT 0xcc
+0000            301   _T5SPLIT        BIT 0xcb
+0000            302   _TR5            BIT 0xca
+0000            303   _TMR5CN_1       BIT 0xc9
+0000            304   _T5XCLK         BIT 0xc8
+0000            305   _CY             BIT 0xd7
+0000            306   _AC             BIT 0xd6
+0000            307   _F0             BIT 0xd5
+0000            308   _RS1            BIT 0xd4
+0000            309   _RS0            BIT 0xd3
+0000            310   _OV             BIT 0xd2
+0000            311   _F1             BIT 0xd1
+0000            312   _PARITY         BIT 0xd0
+0000            313   _CF             BIT 0xdf
+0000            314   _CR             BIT 0xde
+0000            315   _PCA0CN_5       BIT 0xde
+0000            316   _CCF4           BIT 0xdc
+0000            317   _CCF3           BIT 0xdb
+0000            318   _CCF2           BIT 0xda
+0000            319   _CCF1           BIT 0xd9
+0000            320   _CCF0           BIT 0xd8
+0000            321   _ACC_7          BIT 0xe7
+0000            322   _ACC_6          BIT 0xe6
+0000            323   _ACC_5          BIT 0xe5
+0000            324   _ACC_4          BIT 0xe4
+0000            325   _ACC_3          BIT 0xe3
+0000            326   _ACC_2          BIT 0xe2
+0000            327   _ACC_1          BIT 0xe1
+0000            328   _ACC_0          BIT 0xe0
+0000            329   _AD0EN          BIT 0xef
+0000            330   _AD0TM          BIT 0xee
+0000            331   _AD0INT         BIT 0xed
+0000            332   _AD0BUSY        BIT 0xec
+0000            333   _AD0WINT        BIT 0xeb
+0000            334   _AD0CM2         BIT 0xea
+0000            335   _AD0CM1         BIT 0xe9
+0000            336   _AD0CM0         BIT 0xe8
+0000            337   _B_7            BIT 0xf7
+0000            338   _B_6            BIT 0xf6
+0000            339   _B_5            BIT 0xf5
+0000            340   _B_4            BIT 0xf4
+0000            341   _B_3            BIT 0xf3
+0000            342   _B_2            BIT 0xf2
+0000            343   _B_1            BIT 0xf1
+0000            344   _B_0            BIT 0xf0
+0000            345   _SPIF           BIT 0xff
+0000            346   _WCOL           BIT 0xfe
+0000            347   _MODF           BIT 0xfd
+0000            348   _RXOVRN         BIT 0xfc
+0000            349   _NSSMD1         BIT 0xfb
+0000            350   _NSSMD0         BIT 0xfa
+0000            351   _TXBMT          BIT 0xf9
+0000            352   _SPIEN          BIT 0xf8
+0000            353   ;--------------------------------------------------------
+0000            354   ; overlayable register banks
+0000            355   ;--------------------------------------------------------
+0000            356            rbank0 segment data overlay
+0000            357   ;--------------------------------------------------------
+0000            358   ; internal ram data
+0000            359   ;--------------------------------------------------------
+0000            360            rseg R_DSEG
+0000            361   _pwm_count:
+0000            362            ds 1
+0001            363   _main_frequency_1_47:
+0001            364            ds 4
+0005            365   ;--------------------------------------------------------
+0005            366   ; overlayable items in internal ram 
+0005            367   ;--------------------------------------------------------
+0000            368            rseg R_OSEG
+0000            369   ;--------------------------------------------------------
+0000            370   ; indirectly addressable internal ram data
+0000            371   ;--------------------------------------------------------
+0000            372            rseg R_ISEG
+0000            373   ;--------------------------------------------------------
+0000            374   ; absolute internal ram data
+0000            375   ;--------------------------------------------------------
+0000            376            DSEG
+0000            377   ;--------------------------------------------------------
+0000            378   ; bit data
+0000            379   ;--------------------------------------------------------
+0000            380            rseg R_BSEG
+0000            381   ;--------------------------------------------------------
+0000            382   ; paged external ram data
+0000            383   ;--------------------------------------------------------
+0000            384            rseg R_PSEG
+0000            385   ;--------------------------------------------------------
+0000            386   ; external ram data
+0000            387   ;--------------------------------------------------------
+0000            388            rseg R_XSEG
+0000            389   ;--------------------------------------------------------
+0000            390   ; absolute external ram data
+0000            391   ;--------------------------------------------------------
+0000            392            XSEG
+0000            393   ;--------------------------------------------------------
+0000            394   ; external initialized ram data
+0000            395   ;--------------------------------------------------------
+0000            396            rseg R_IXSEG
+0000            397            rseg R_HOME
+0000            398            rseg R_GSINIT
+0000            399            rseg R_CSEG
+0000            400   ;--------------------------------------------------------
+0000            401   ; Reset entry point and interrupt vectors
+0000            402   ;--------------------------------------------------------
+0000            403            CSEG at 0x0000
+0000 020100     404            ljmp    _crt0
+002B            405            CSEG at 0x002b
+002B 020100     406            ljmp    _Timer2_ISR
+002E            407   ;--------------------------------------------------------
+002E            408   ; global & static initialisations
+002E            409   ;--------------------------------------------------------
+0000            410            rseg R_HOME
+0000            411            rseg R_GSINIT
+0000            412            rseg R_GSINIT
+0000            413   ;--------------------------------------------------------
+0000            414   ; data variables initialization
+0000            415   ;--------------------------------------------------------
+0000            416            rseg R_DINIT
+0000            417   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:19: volatile unsigned char pwm_count=0;
+0000 751000     418            mov     _pwm_count,#0x00
+0003            419            ; The linker places a 'ret' at the end of segment R_DINIT.
+0003            420   ;--------------------------------------------------------
+0003            421   ; code
+0003            422   ;--------------------------------------------------------
+0000            423            rseg R_CSEG
+0000            424   ;------------------------------------------------------------
+0000            425   ;Allocation info for local variables in function '_c51_external_startup'
+0000            426   ;------------------------------------------------------------
+0000            427   ;------------------------------------------------------------
+0000            428   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:21: char _c51_external_startup (void)
+0000            429   ;        -----------------------------------------
+0000            430   ;         function _c51_external_startup
+0000            431   ;        -----------------------------------------
+0000            432   __c51_external_startup:
+0000            433            using   0
+0000            434   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:23: PCA0MD&=(~0x40) ;    // DISABLE WDT: clear Watchdog Enable bit
+0000 53D9BF     435            anl     _PCA0MD,#0xBF
+0003            436   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:24: VDM0CN=0x80; // enable VDD monitor
+0003 75FF80     437            mov     _VDM0CN,#0x80
+0006            438   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:25: RSTSRC=0x02|0x04; // Enable reset on missing clock detector and VDD
+0006 75EF06     439            mov     _RSTSRC,#0x06
+0009            440   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:33: CLKSEL|=0b_0000_0011; // SYSCLK derived from the Internal High-Frequency Oscillator / 1.
+0009 43A903     441            orl     _CLKSEL,#0x03
+000C            442   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:37: OSCICN |= 0x03; // Configure internal oscillator for its maximum frequency
+000C 43B203     443            orl     _OSCICN,#0x03
+000F            444   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:40: SCON0 = 0x10; 
+000F 759810     445            mov     _SCON0,#0x10
+0012            446   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:42: TH1 = 0x10000-((SYSCLK/BAUDRATE)/2L);
+0012 758D30     447            mov     _TH1,#0x30
+0015            448   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:43: CKCON &= ~0x0B;                  // T1M = 1; SCA1:0 = xx
+0015 538EF4     449            anl     _CKCON,#0xF4
+0018            450   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:44: CKCON |=  0x08;
+0018 438E08     451            orl     _CKCON,#0x08
+001B            452   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:57: TL1 = TH1;      // Init Timer1
+001B 858D8B     453            mov     _TL1,_TH1
+001E            454   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:58: TMOD &= ~0xf0;  // TMOD: timer 1 in 8-bit autoreload
+001E 53890F     455            anl     _TMOD,#0x0F
+0021            456   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:59: TMOD |=  0x20;                       
+0021 438920     457            orl     _TMOD,#0x20
+0024            458   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:60: TR1 = 1; // START Timer1
+0024 D28E       459            setb    _TR1
+0026            460   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:61: TI = 1;  // Indicate TX0 ready
+0026 D299       461            setb    _TI
+0028            462   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:64: P2MDOUT|=0b_0000_0011;
+0028 43A603     463            orl     _P2MDOUT,#0x03
+002B            464   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:65: P0MDOUT |= 0x10; // Enable UTX as push-pull output
+002B 43A410     465            orl     _P0MDOUT,#0x10
+002E            466   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:66: XBR0     = 0x01; // Enable UART on P0.4(TX) and P0.5(RX)                     
+002E 75E101     467            mov     _XBR0,#0x01
+0031            468   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:67: XBR1     = 0x40; // Enable crossbar and weak pull-ups
+0031 75E240     469            mov     _XBR1,#0x40
+0034            470   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:70: TMR2CN=0x00;   // Stop Timer2; Clear TF2;
+0034 75C800     471            mov     _TMR2CN,#0x00
+0037            472   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:71: CKCON|=0b_0001_0000;
+0037 438E10     473            orl     _CKCON,#0x10
+003A            474   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:72: TMR2RL=(-(SYSCLK/(2*DEFAULT_F))); // Initialize reload value
+003A 75CAF4     475            mov     _TMR2RL,#0xF4
+003D 75CBF9     476            mov     (_TMR2RL >> 8),#0xF9
+0040            477   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:73: TMR2=0xffff;   // Set to reload immediately
+0040 75CCFF     478            mov     _TMR2,#0xFF
+0043 75CDFF     479            mov     (_TMR2 >> 8),#0xFF
+0046            480   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:74: ET2=1;         // Enable Timer2 interrupts
+0046 D2AD       481            setb    _ET2
+0048            482   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:75: TR2=1;         // Start Timer2
+0048 D2CA       483            setb    _TR2
+004A            484   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:77: EA=1; // Enable interrupts
+004A D2AF       485            setb    _EA
+004C            486   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:79: return 0;
+004C 758200     487            mov     dpl,#0x00
+004F 22         488            ret
+0050            489   ;------------------------------------------------------------
+0050            490   ;Allocation info for local variables in function 'Timer2_ISR'
+0050            491   ;------------------------------------------------------------
+0050            492   ;------------------------------------------------------------
+0050            493   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:82: void Timer2_ISR (void) interrupt 5
+0050            494   ;        -----------------------------------------
+0050            495   ;         function Timer2_ISR
+0050            496   ;        -----------------------------------------
+0050            497   _Timer2_ISR:
+0050 C0D0       498            push    psw
+0052 75D000     499            mov     psw,#0x00
+0055            500   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:84: TF2H = 0; // Clear Timer2 interrupt flag
+0055 C2CF       501            clr     _TF2H
+0057            502   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:85: OUT0=!OUT0;
+0057 B2A0       503            cpl     _P2_0
+0059            504   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:86: OUT1=!OUT0;
+0059 A2A0       505            mov     c,_P2_0
+005B B3         506            cpl     c
+005C 92A1       507            mov     _P2_1,c
+005E D0D0       508            pop     psw
+0060 32         509            reti
+0061            510   ;        eliminated unneeded push/pop dpl
+0061            511   ;        eliminated unneeded push/pop dph
+0061            512   ;        eliminated unneeded push/pop b
+0061            513   ;        eliminated unneeded push/pop acc
+0061            514   ;------------------------------------------------------------
+0061            515   ;Allocation info for local variables in function 'main'
+0061            516   ;------------------------------------------------------------
+0061            517   ;frequency                 Allocated with name '_main_frequency_1_47'
+0061            518   ;x                         Allocated to registers r2 r3 r4 r5 
+0061            519   ;------------------------------------------------------------
+0061            520   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:89: void main (void)
+0061            521   ;        -----------------------------------------
+0061            522   ;         function main
+0061            523   ;        -----------------------------------------
+0061            524   _main:
+0061            525   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:93: printf("\x1b[2J"); // Clear screen using ANSI escape sequence.
+0061 74B8       526            mov     a,#__str_0
+0063 C0E0       527            push    acc
+0065 7494       528            mov     a,#(__str_0 >> 8)
+0067 C0E0       529            push    acc
+0069 7480       530            mov     a,#0x80
+006B C0E0       531            push    acc
+006D 120100     532            lcall   _printf
+0070 1581       533            dec     sp
+0072 1581       534            dec     sp
+0074 1581       535            dec     sp
+0076            536   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:95: "Check pins P2.0 and P2.1 with the oscilloscope.\r\n");
+0076 74B8       537            mov     a,#__str_1
+0078 C0E0       538            push    acc
+007A 7495       539            mov     a,#(__str_1 >> 8)
+007C C0E0       540            push    acc
+007E 7480       541            mov     a,#0x80
+0080 C0E0       542            push    acc
+0082 120100     543            lcall   _printf
+0085 1581       544            dec     sp
+0087 1581       545            dec     sp
+0089 1581       546            dec     sp
+008B            547   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:97: while(1)
+008B            548   L004005?:
+008B            549   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:99: printf("New frequency=");
+008B 7438       550            mov     a,#__str_2
+008D C0E0       551            push    acc
+008F 7496       552            mov     a,#(__str_2 >> 8)
+0091 C0E0       553            push    acc
+0093 7480       554            mov     a,#0x80
+0095 C0E0       555            push    acc
+0097 120100     556            lcall   _printf
+009A 1581       557            dec     sp
+009C 1581       558            dec     sp
+009E 1581       559            dec     sp
+00A0            560   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:100: scanf("%lu", &frequency);
+00A0 74B8       561            mov     a,#_main_frequency_1_47
+00A2 C0E0       562            push    acc
+00A4 7493       563            mov     a,#(_main_frequency_1_47 >> 8)
+00A6 C0E0       564            push    acc
+00A8 7440       565            mov     a,#0x40
+00AA C0E0       566            push    acc
+00AC 7478       567            mov     a,#__str_3
+00AE C0E0       568            push    acc
+00B0 7496       569            mov     a,#(__str_3 >> 8)
+00B2 C0E0       570            push    acc
+00B4 7480       571            mov     a,#0x80
+00B6 C0E0       572            push    acc
+00B8 120100     573            lcall   _scanf
+00BB E581       574            mov     a,sp
+00BD 24FA       575            add     a,#0xfa
+00BF F581       576            mov     sp,a
+00C1            577   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:101: x=(SYSCLK/(2L*frequency));
+00C1 E5B8       578            mov     a,_main_frequency_1_47
+00C3 25B8       579            add     a,_main_frequency_1_47
+00C5 F500       580            mov     __divulong_PARM_2,a
+00C7 E5B9       581            mov     a,(_main_frequency_1_47 + 1)
+00C9 33         582            rlc     a
+00CA F501       583            mov     (__divulong_PARM_2 + 1),a
+00CC E5BA       584            mov     a,(_main_frequency_1_47 + 2)
+00CE 33         585            rlc     a
+00CF F502       586            mov     (__divulong_PARM_2 + 2),a
+00D1 E5BB       587            mov     a,(_main_frequency_1_47 + 3)
+00D3 33         588            rlc     a
+00D4 F503       589            mov     (__divulong_PARM_2 + 3),a
+00D6 906C00     590            mov     dptr,#0x6C00
+00D9 75F0DC     591            mov     b,#0xDC
+00DC 7402       592            mov     a,#0x02
+00DE 120100     593            lcall   __divulong
+00E1 AA82       594            mov     r2,dpl
+00E3 AB83       595            mov     r3,dph
+00E5 ACF0       596            mov     r4,b
+00E7 FD         597            mov     r5,a
+00E8            598   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:102: if(x>0xffff)
+00E8 C3         599            clr     c
+00E9 74FF       600            mov     a,#0xFF
+00EB 9A         601            subb    a,r2
+00EC 74FF       602            mov     a,#0xFF
+00EE 9B         603            subb    a,r3
+00EF E4         604            clr     a
+00F0 9C         605            subb    a,r4
+00F1 E4         606            clr     a
+00F2 9D         607            subb    a,r5
+00F3 5001       608            jnc     L004002?
+00F5            609   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:104: printf("Sorry %lu Hz is out of range.\n", frequency);
+00F5 C0B8       610            push    _main_frequency_1_47
+00F7 C0B9       611            push    (_main_frequency_1_47 + 1)
+00F9 C0BA       612            push    (_main_frequency_1_47 + 2)
+00FB C0BB       613            push    (_main_frequency_1_47 + 3)
+00FD 7448       614            mov     a,#__str_4
+00FF C0E0       615            push    acc
+0101 7498       616            mov     a,#(__str_4 >> 8)
+0103 C0E0       617            push    acc
+0105 7480       618            mov     a,#0x80
+0107 C0E0       619            push    acc
+0109 120100     620            lcall   _printf
+010C E581       621            mov     a,sp
+010E 24F9       622            add     a,#0xf9
+0110 F581       623            mov     sp,a
+0112 020100     624            ljmp    L004005?
+0115            625   L004002?:
+0115            626   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:108: TR2=0; // Stop timer 2
+0115 C2CA       627            clr     _TR2
+0117            628   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:109: TMR2RL=0x10000L-x; // Change reload value for new frequency
+0117 E4         629            clr     a
+0118 C3         630            clr     c
+0119 9A         631            subb    a,r2
+011A FA         632            mov     r2,a
+011B E4         633            clr     a
+011C 9B         634            subb    a,r3
+011D FB         635            mov     r3,a
+011E 7401       636            mov     a,#0x01
+0120 9C         637            subb    a,r4
+0121 E4         638            clr     a
+0122 9D         639            subb    a,r5
+0123 8ACA       640            mov     _TMR2RL,r2
+0125 8BCB       641            mov     (_TMR2RL >> 8),r3
+0127            642   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:110: TR2=1; // Start timer 2
+0127 D2CA       643            setb    _TR2
+0129            644   ;        C:\Users\Graham\Documents\GitHub\Elec291-Project2\Sample Code\freq_gen.c:111: printf("\n");
+0129 7488       645            mov     a,#__str_5
+012B C0E0       646            push    acc
+012D 7498       647            mov     a,#(__str_5 >> 8)
+012F C0E0       648            push    acc
+0131 7480       649            mov     a,#0x80
+0133 C0E0       650            push    acc
+0135 120100     651            lcall   _printf
+0138 1581       652            dec     sp
+013A 1581       653            dec     sp
+013C 1581       654            dec     sp
+013E 020100     655            ljmp    L004005?
+0141            656            rseg R_CSEG
+0141            657   
+0000            658            rseg R_XINIT
+0000            659   
+0000            660            rseg R_CONST
+0000            661   __str_0:
+0000 1B         662            db 0x1B
+0001 5B324A     663            db '[2J'
+0004 00         664            db 0x00
+0005            665   __str_1:
+0005 56617269   666            db 'Variable frequency generator for the F38x.'
+     61626C65
+     20667265
+     7175656E
+     63792067
+     656E6572
+     61746F72
+     20666F72
+     20746865
+     20463338
+     782E
+002F 0D         667            db 0x0D
+0030 0A         668            db 0x0A
+0031 43686563   669            db 'Check pins P2.0 '
+     6B207069
+     6E732050
+     322E3020
+0041 616E6420   670            db 'and P2.1 with the oscilloscope.'
+     50322E31
+     20776974
+     68207468
+     65206F73
+     63696C6C
+     6F73636F
+     70652E
+0060 0D         671            db 0x0D
+0061 0A         672            db 0x0A
+0062 00         673            db 0x00
+0063            674   __str_2:
+0063 4E657720   675            db 'New frequency='
+     66726571
+     75656E63
+     793D
+0071 00         676            db 0x00
+0072            677   __str_3:
+0072 256C75     678            db '%lu'
+0075 00         679            db 0x00
+0076            680   __str_4:
+0076 536F7272   681            db 'Sorry %lu Hz is out of range.'
+     7920256C
+     7520487A
+     20697320
+     6F757420
+     6F662072
+     616E6765
+     2E
+0093 0A         682            db 0x0A
+0094 00         683            db 0x00
+0095            684   __str_5:
+0095 0A         685            db 0x0A
+0096 00         686            db 0x00
+0097            687   
+002E            688            CSEG
+002E            689   
+002E            690   end
