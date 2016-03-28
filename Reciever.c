@@ -11,7 +11,9 @@
 #define  LEFT_BACKWARD   P2_4
 #define  RIGHT_BACKWARD  P2_2
 
-#define SIGNAL_IN P2_1 ///where ever the signal comes in from receiver
+#define SIGNAL_IN P1_7 ///where ever the signal comes in from receiver
+#define LEFT_DISTANCE P2_0 
+#define RIGHT_DISTANCE P2_1 
 
 //all of there need to be confirmed
 #define joystick  0
@@ -24,10 +26,12 @@
 #define PUSH_SFRPAGE _asm push _SFRPAGE _endasm
 #define POP_SFRPAGE _asm pop _SFRPAGE _endasm
 
+#define VDD 3.325 //Will need to be measured 
+
 volatile unsigned char signal[20];
 volatile unsigned char pwm_count;
 volatile bit           mode;
-volatile unsigned char LF, LB, RF, RB, signal_counter, start_counter;
+volatile unsigned char LF, LB, RF, RB, signal_counter, start_counter, interrupt_counter;
 volatile bit right_motor, back_right_motor, left_motor, back_left_motor; 
 volatile bit  c, buffer_full, flag;
 
@@ -77,10 +81,24 @@ char _c51_external_startup (void)
 	TI = 1;  // Indicate TX0 ready
 	
 	// Configure the pins used for square output
+	P1MDOUT=0b_0000_0000;
+	P1 = 0b_1000_0000;
 	P2MDOUT|=0b_0011_1100;
-	P0MDOUT |= 0x10; // Enable UTX as push-pull output
+	P0MDOUT |= 0b_0001_0100; // Enable UTX as push-pull output
 	XBR0     = 0b_0000_0001; // Enable UART on P0.4(TX) and P0.5(RX)                     
 	XBR1     = 0b_0100_0000; // Enable crossbar and weak pull-ups
+	
+	//P1MDIN &= 0b0111_1111; //Pin 1_7 
+	
+	//Peak Detector 
+	P2MDIN &= 0b1111_1100; //Pins 2_0, 2_1
+	P2SKIP |= 0b0000_0011; //Skip crossbar decoding 
+	AMX0P = LQFP32_MUX_P2_0; // Select positive input from P2.0, will need to be changed when readng from 2_1
+	AMX0N = LQFP32_MUX_GND;  // GND is negative input (Single-ended Mode)
+	
+	ADC0CF = 0xF8; // SAR clock = 31, Right-justified result
+	ADC0CN = 0b_1000_0000; // AD0EN=1, AD0TM=0
+  	REF0CN=0b_0000_1000; //Select VDD as the voltage reference for the converter
 	
 	
 	// Initialize timer 2 for periodic interrupts
@@ -97,8 +115,10 @@ char _c51_external_startup (void)
 	CKCON1|=0b_0000_0100;
 	
 	///////NEED THE RATE
-	TMR5RL=(-(SYSCLK/(2*48))/(100L)); // Initialize reload value
+//	TMR5RL=(-(SYSCLK/(2*48))/(200L)); // Initialize reload value
 	///////
+	
+	TMR5RL = (0x10000L - (SYSCLK / 1000));
 	
 	TMR5=0xffff;   // Set to reload immediately
 	EIE2 |= ET5;        // Enable Timer5 interrupts
@@ -113,36 +133,48 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	 
 	//change spf page
 	PUSH_SFRPAGE;
-	SFRPAGE=0xf;
+	SFRPAGE=0xf; 
 	
 	TF5H = 0; // Clear Timer5 interrupt flag
-	if(!buffer_full)
+	
+	if(interrupt_counter < 4)
+		interrupt_counter++;
+	else
 	{
-		if(!flag)
+		P0_2 = !P0_2;
+	
+		interrupt_counter = 0;
+		
+	//	printf("%u", SIGNAL_IN);
+		
+		if(!buffer_full)
 		{
-			if (SIGNAL_IN) 
-				start_counter++; 
-			else 
-				start_counter=0; 
-				
-			if (start_counter>=11)
+			if(!flag)
 			{
-				flag = 1;
-				start_counter = 0;
-			}
-		}
-		else
-		{		
-			if(signal_counter < 20)
-			{
-				signal[signal_counter] = SIGNAL_IN; 
-				signal_counter++; 
+				if (SIGNAL_IN) 
+					start_counter++; 
+				else 
+					start_counter=0; 
+					
+				if (start_counter>=11)
+				{
+					flag = 1;
+					start_counter = 0;
+				}
 			}
 			else
-			{
-				signal_counter = 0;
-				flag = 0;
-				buffer_full = 1;
+			{		
+				if(signal_counter < 20)
+				{
+					signal[signal_counter] = SIGNAL_IN; 
+					signal_counter++; 
+				}
+				else
+				{
+					signal_counter = 0;
+					flag = 0;
+					buffer_full = 1;
+				}
 			}
 		}
 	}
@@ -259,13 +291,11 @@ void right_motor_power(int power)
         RB = power; 
     else if (back_right_motor == 0)
         RB = 0; 
-    printf("\n%u", RF); 
-    printf("\n%u", RB); 
 }
 
 void main(void){
 	
-    unsigned long int testNumber; 
+    //unsigned long int testNumber; 
     int i; 
     int left_power = 0, right_power = 0;
     bit left_dir = 1, right_dir = 1, other_button = 0;
@@ -287,7 +317,9 @@ void main(void){
 	start_counter = 0; 
 	buffer_full = 0;
 	flag = 0;
+	interrupt_counter = 0;
 	
+	/*
 	//Specifically for testing, remove later 
 	printf("Enter integer\n");
 	//scanf("%lu", &testNumber); 
@@ -301,7 +333,7 @@ void main(void){
 	
 	buffer_full = 1; //ggggggggggggggggggggggg
 	
-	
+	*/
 	/*for (i=0; i<32; i++)
 	{
 		printf("%u", signal[i]); 
@@ -310,7 +342,12 @@ void main(void){
 	//SIGNAL_IN = 1; 
 	
 	//wait when we start until the first start sequence
-	//while(!SIGNAL_IN);
+	while(!SIGNAL_IN)
+		printf("%u", SIGNAL_IN);
+	
+	printf("hi");
+	interrupt_counter = 2;	
+	
 	EA = 1;
 	
 	
@@ -334,6 +371,8 @@ void main(void){
 			if(buffer_full)
 			{
 				printf("\nBuffer full");
+				for (i=0; i<20; i++) 
+					printf("%u", signal[i]); 
 				
 				EIE2 &= 0b_1101_1111;
 				
