@@ -139,7 +139,9 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	TF5H = 0; // Clear Timer5 interrupt flag
 	
 	if(interrupt_counter < 10)
+	{
 		interrupt_counter++;
+	}
 	else
 	{
 		P0_2 = !P0_2;
@@ -157,7 +159,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 				else 
 					start_counter=0; 
 					
-				if (start_counter>=11)
+				if (start_counter>=11)	//sorta worked at >= 11, so Iunno.
 				{
 					flag = 1;
 					start_counter = 0;
@@ -166,8 +168,9 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 			else
 			{		
 				if(signal_counter < 20)
-				{
-					signal[signal_counter] = SIGNAL_IN; 
+				{	
+					signal[signal_counter] = SIGNAL_IN;
+					
 					signal_counter++; 
 				}
 				else
@@ -305,7 +308,6 @@ void main(void){
     //int testArray[32];
   	
   	SIGNAL_IN = 0;
-  
     
 	//initialization
 	_c51_external_startup();
