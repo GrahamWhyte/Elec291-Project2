@@ -88,7 +88,8 @@ char _c51_external_startup (void)
 	XBR0     = 0b_0000_0001; // Enable UART on P0.4(TX) and P0.5(RX)                     
 	XBR1     = 0b_0100_0000; // Enable crossbar and weak pull-ups
 	
-	//P1MDIN &= 0b0111_1111; //Pin 1_7 
+	P1MDIN &= 0b1000_0000; //Pin 1_7 
+	
 	
 	//Peak Detector 
 	P2MDIN &= 0b1111_1100; //Pins 2_0, 2_1
@@ -118,7 +119,7 @@ char _c51_external_startup (void)
 //	TMR5RL=(-(SYSCLK/(2*48))/(200L)); // Initialize reload value
 	///////
 	
-	TMR5RL = (0x10000L - (SYSCLK / 1000));
+	TMR5RL = (0x10000L - (SYSCLK / 1001));
 	
 	TMR5=0xffff;   // Set to reload immediately
 	EIE2 |= ET5;        // Enable Timer5 interrupts
@@ -137,7 +138,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	
 	TF5H = 0; // Clear Timer5 interrupt flag
 	
-	if(interrupt_counter < 4)
+	if(interrupt_counter < 10)
 		interrupt_counter++;
 	else
 	{
@@ -145,7 +146,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	
 		interrupt_counter = 0;
 		
-	//	printf("%u", SIGNAL_IN);
+		//printf("%u", SIGNAL_IN);
 		
 		if(!buffer_full)
 		{
@@ -177,6 +178,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 				}
 			}
 		}
+		
 	}
 	
 	/*if(b<32){
@@ -272,11 +274,11 @@ void left_motor_power(int power)
 {
     if (left_motor == 1)
         LF = power; 
-    else if (left_motor == 0) 
+    if (left_motor == 0) 
         LF = 0; 
-    else if (back_left_motor == 1)
+    if (back_left_motor == 1)
         LB = power; 
-    else if (back_left_motor == 0)
+    if (back_left_motor == 0)
         LB = 0; 
     
 }
@@ -285,11 +287,11 @@ void right_motor_power(int power)
 {
     if (right_motor == 1)
         RF = power; 
-    else if (right_motor == 0) 
+    if (right_motor == 0) 
         RF = 0; 
-    else if (back_right_motor == 1)
+    if (back_right_motor == 1)
         RB = power; 
-    else if (back_right_motor == 0)
+    if (back_right_motor == 0)
         RB = 0; 
 }
 
@@ -346,7 +348,7 @@ void main(void){
 		printf("%u", SIGNAL_IN);
 	
 	printf("hi");
-	interrupt_counter = 2;	
+	interrupt_counter = 5;	
 	
 	EA = 1;
 	
@@ -370,11 +372,11 @@ void main(void){
 		//{
 			if(buffer_full)
 			{
-				printf("\nBuffer full");
+				printf("\nBuffer full\n");
 				for (i=0; i<20; i++) 
 					printf("%u", signal[i]); 
 				
-				EIE2 &= 0b_1101_1111;
+			//	EIE2 &= 0b_1101_1111;
 				
 				buffer_full = 0;
 				
@@ -394,9 +396,9 @@ void main(void){
 				printf("\nleftpow:%i", left_power);
 				
 				right_power = binary2int(13, 19);
-				printf("\nrightpow:%i", right_power);
+				printf("\nrightpow:%i\n", right_power);
 						
-				EIE2 |= 0b_0010_0000;
+				//EIE2 |= 0b_0010_0000;
 			}
 			
 			
