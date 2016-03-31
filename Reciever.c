@@ -24,7 +24,7 @@
 #define POWER2    25
 
 #define START_SIZE 5
-#define SIGNAL_SIZE 13
+#define SIGNAL_SIZE 10
 
 #define PUSH_SFRPAGE _asm push _SFRPAGE _endasm
 #define POP_SFRPAGE _asm pop _SFRPAGE _endasm
@@ -145,7 +145,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	if(interrupt_counter < 10)
 	{
 		interrupt_counter++;
-		//sum += SIGNAL_IN;
+		sum += SIGNAL_IN;
 		//P0_2 = !P0_2;
 	}
 	else
@@ -165,7 +165,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 				else 
 					start_counter=0; 
 					
-				if (start_counter>=START_SIZE)	//sorta worked at >= 11, so Iunno.
+				if (start_counter>START_SIZE-1)	//sorta worked at >= 11, so Iunno.
 				{
 					flag = 1;
 					start_counter = 0;
@@ -175,16 +175,16 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 			{		
 				if(signal_counter < SIGNAL_SIZE)
 				{	
-					signal[signal_counter] = SIGNAL_IN;
-					/*
-					if(sum < 5)
+					//signal[signal_counter] = SIGNAL_IN;
+					
+					if(sum < 6)
 						signal[signal_counter] = 0;
 					else
 						signal[signal_counter] = 1;
 						
 					
 					sum=0;
-					*/
+					
 					signal_counter++; 
 				}
 				else
@@ -263,19 +263,19 @@ void direction(unsigned char left, unsigned char right)
         back_right_motor = 0; 
         back_left_motor = 0;   
     }
-    else if (left == 1 && right == 0) // left forward high, right backward high
+    else if (left == 0 && right == 1) // left forward high, right backward high
     {
         right_motor = 0; 
         left_motor = 1; 
         back_right_motor = 1; 
         back_left_motor = 0; 
     }
-    else if (left == 0 && right == 1) // left backward high, right forward high  
+    else if (left == 1 && right == 0) // left backward high, right forward high  
     {
         right_motor = 1; 
         left_motor = 0; 
-        back_right_motor = 1; 
-        back_left_motor = 0; 
+        back_right_motor = 0; 
+        back_left_motor = 1; 
     }
     else if (left == 0 && right == 0) //both backward moters high
     {
@@ -323,6 +323,7 @@ void main(void){
     int i; 
     int left_power = 0, right_power = 0;
     bit left_dir = 1, right_dir = 1, other_button = 0;
+    int power;
     
     //int testArray[32];
   	
@@ -343,6 +344,7 @@ void main(void){
 	interrupt_counter = 0;
 	
 	sum = 0;
+	power = 0;
 	
 	/*
 	//Specifically for testing, remove later 
@@ -373,7 +375,7 @@ void main(void){
 		printf("%u", SIGNAL_IN);
 	
 	printf("hi");
-	interrupt_counter = 5;	
+	//interrupt_counter = 5;	
 	
 	EA = 1;
 	
@@ -420,13 +422,18 @@ void main(void){
 				right_dir = signal[4];
 				printf("\nrightdir:%u", right_dir);
 				
+				power = binary2int(7, 9);
+				parse_power(&power);
+				printf("\npower:%d", power);
+				/*
 				left_power = binary2int(6, 8);
 				parse_power(&left_power);
 				printf("\nleftpow:%i", left_power);
 				
-				right_power = binary2int(10, 12);
+				right_power = binary2int(11, 13);
 				parse_power(&right_power);
 				printf("\nrightpow:%i\n", right_power);
+				*/
 						
 				EIE2 |= 0b_0010_0000;
 			}
@@ -459,13 +466,19 @@ void main(void){
 		if(1)
 		
 		{
-		
+			/*
 			direction(left_dir, right_dir); 
 					
 	        left_motor_power(left_power); 
 					
 	        right_motor_power(right_power);
-		
+			*/
+			
+			direction(left_dir, right_dir); 
+					
+	        left_motor_power(power); 
+					
+	        right_motor_power(power);
 		
 		}
 		
