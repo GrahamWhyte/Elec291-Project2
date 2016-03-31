@@ -23,17 +23,21 @@
 #define POWER1    17
 #define POWER2    25
 
+#define START_SIZE 5
+#define SIGNAL_SIZE 13
+
 #define PUSH_SFRPAGE _asm push _SFRPAGE _endasm
 #define POP_SFRPAGE _asm pop _SFRPAGE _endasm
 
 #define VDD 3.325 //Will need to be measured 
 
-volatile unsigned char signal[20];
+volatile unsigned char signal[SIGNAL_SIZE];
 volatile unsigned char pwm_count;
 volatile bit           mode;
 volatile unsigned char LF, LB, RF, RB, signal_counter, start_counter, interrupt_counter;
 volatile bit right_motor, back_right_motor, left_motor, back_left_motor; 
 volatile bit  c, buffer_full, flag;
+volatile int sum;
 
 
 
@@ -119,7 +123,7 @@ char _c51_external_startup (void)
 //	TMR5RL=(-(SYSCLK/(2*48))/(200L)); // Initialize reload value
 	///////
 	
-	TMR5RL = (0x10000L - (SYSCLK / 1001));
+	TMR5RL = (0x10000L - (SYSCLK / 996));
 	
 	TMR5=0xffff;   // Set to reload immediately
 	EIE2 |= ET5;        // Enable Timer5 interrupts
@@ -141,6 +145,8 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	if(interrupt_counter < 10)
 	{
 		interrupt_counter++;
+		//sum += SIGNAL_IN;
+		//P0_2 = !P0_2;
 	}
 	else
 	{
@@ -159,7 +165,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 				else 
 					start_counter=0; 
 					
-				if (start_counter>=11)	//sorta worked at >= 11, so Iunno.
+				if (start_counter>=START_SIZE)	//sorta worked at >= 11, so Iunno.
 				{
 					flag = 1;
 					start_counter = 0;
@@ -167,10 +173,18 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 			}
 			else
 			{		
-				if(signal_counter < 20)
+				if(signal_counter < SIGNAL_SIZE)
 				{	
 					signal[signal_counter] = SIGNAL_IN;
+					/*
+					if(sum < 5)
+						signal[signal_counter] = 0;
+					else
+						signal[signal_counter] = 1;
+						
 					
+					sum=0;
+					*/
 					signal_counter++; 
 				}
 				else
@@ -298,6 +312,11 @@ void right_motor_power(int power)
         RB = 0; 
 }
 
+void parse_power(int *power)
+{
+	*power = *power * 14;
+}
+
 void main(void){
 	
     //unsigned long int testNumber; 
@@ -323,27 +342,31 @@ void main(void){
 	flag = 0;
 	interrupt_counter = 0;
 	
+	sum = 0;
+	
 	/*
 	//Specifically for testing, remove later 
 	printf("Enter integer\n");
 	//scanf("%lu", &testNumber); 
-	testNumber = 0b_00_11_0_1111111_0_1111111; 
+	testNumber = 0b_00_11_0_111_0_111; 
 	printf("\n%lu\n", testNumber); 
-	for (i=0; i<20; i++)
+	for (i=0; i<SIGNAL_SIZE; i++)
 	{
-		signal[19 - i] = (((unsigned long int)1 << i) & testNumber) >> i; 
-		printf("%u", signal[19-i]); 
+		signal[SIGNAL_SIZE -1 - i] = (((unsigned long int)1 << i) & testNumber) >> i; 
+		//printf("%u", signal[SIGNAL_SIZE -1 -i]); 
 	}
 	
 	buffer_full = 1; //ggggggggggggggggggggggg
 	
-	*/
-	/*for (i=0; i<32; i++)
+	
+	for (i=0; i<SIGNAL_SIZE; i++)
 	{
 		printf("%u", signal[i]); 
-	}*/
+	}
 	
-	//SIGNAL_IN = 1; 
+	SIGNAL_IN = 1; 
+	*/
+	
 	
 	//wait when we start until the first start sequence
 	while(!SIGNAL_IN)
@@ -372,35 +395,40 @@ void main(void){
 		//decode the signal if you are in this mode
 		//if(mode == joystick)
 		//{
+		
 			if(buffer_full)
 			{
 				printf("\nBuffer full\n");
-				for (i=0; i<20; i++) 
+				printf("Received Signal: ");
+				for (i=0; i<SIGNAL_SIZE; i++) 
 					printf("%u", signal[i]); 
 				
-			//	EIE2 &= 0b_1101_1111;
+				EIE2 &= 0b_1101_1111;
 				
 				buffer_full = 0;
 				
-				mode = signal[0];
+				printf("\npad: %u", signal[0]);
+				mode = signal[1];
 				printf("\nmode:%u", mode);
 				
-				other_button = signal[1];
+				other_button = signal[2];
 				printf("\nbutton:%u", other_button);
 				
-				left_dir = signal[2];
+				left_dir = signal[3];
 				printf("\nleftdir:%u", left_dir);
 				
-				right_dir = signal[3];
+				right_dir = signal[4];
 				printf("\nrightdir:%u", right_dir);
 				
-				left_power = binary2int(5, 11);
+				left_power = binary2int(6, 8);
+				parse_power(&left_power);
 				printf("\nleftpow:%i", left_power);
 				
-				right_power = binary2int(13, 19);
+				right_power = binary2int(10, 12);
+				parse_power(&right_power);
 				printf("\nrightpow:%i\n", right_power);
 						
-				//EIE2 |= 0b_0010_0000;
+				EIE2 |= 0b_0010_0000;
 			}
 			
 			
@@ -427,8 +455,11 @@ void main(void){
             */
 		
 		
-		if(mode == joystick)
+		//if(mode == joystick)
+		if(1)
+		
 		{
+		
 			direction(left_dir, right_dir); 
 					
 	        left_motor_power(left_power); 
