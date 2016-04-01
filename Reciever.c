@@ -16,8 +16,8 @@
 #define RIGHT_DISTANCE P2_1 
 
 //all of there need to be confirmed
-#define joystick  0
-#define tether    1
+#define JOYSTICK  0
+#define TETHER    1
 #define MODE_BIT  12
 #define DIRECTION 14
 #define POWER1    17
@@ -26,10 +26,15 @@
 #define START_SIZE 5
 #define SIGNAL_SIZE 10
 
+#define TOLERANCE 0.3
+
+#define V60cm 2   //voltage when exactly at tracking distance
+
 #define PUSH_SFRPAGE _asm push _SFRPAGE _endasm
 #define POP_SFRPAGE _asm pop _SFRPAGE _endasm
 
-#define VDD 3.325 //Will need to be measured 
+#define VDD 3.358 //Will need to be measured 
+
 
 volatile unsigned char signal[SIGNAL_SIZE];
 volatile unsigned char pwm_count;
@@ -242,6 +247,12 @@ int pow( int base, int exp){
 	
 	return result;
 }
+int abs(int adamsucks){
+	if(adamsucks>=0)
+		return adamsucks;
+	else 
+		return -adamsucks;
+}
 
 int binary2int(int start, int stop){
 
@@ -263,14 +274,14 @@ void direction(unsigned char left, unsigned char right)
         back_right_motor = 0; 
         back_left_motor = 0;   
     }
-    else if (left == 0 && right == 1) // left forward high, right backward high
+    else if (left == 1 && right == 0) // left forward high, right backward high
     {
         right_motor = 0; 
         left_motor = 1; 
         back_right_motor = 1; 
         back_left_motor = 0; 
     }
-    else if (left == 1 && right == 0) // left backward high, right forward high  
+    else if (left == 0 && right == 1) // left backward high, right forward high  
     {
         right_motor = 1; 
         left_motor = 0; 
@@ -289,26 +300,28 @@ void direction(unsigned char left, unsigned char right)
 
 void left_motor_power(int power)
 {
-    if (left_motor == 1)
+    if (left_motor)
         LF = power; 
-    if (left_motor == 0) 
+    else 
         LF = 0; 
-    if (back_left_motor == 1)
+        
+    if (back_left_motor)
         LB = power; 
-    if (back_left_motor == 0)
+    else
         LB = 0; 
     
 }
 
 void right_motor_power(int power)
 {
-    if (right_motor == 1)
+    if (right_motor)
         RF = power; 
-    if (right_motor == 0) 
+    else 
         RF = 0; 
-    if (back_right_motor == 1)
+        
+    if (back_right_motor)
         RB = power; 
-    if (back_right_motor == 0)
+    else
         RB = 0; 
 }
 
@@ -317,13 +330,60 @@ void parse_power(int *power)
 	*power = *power * 14;
 }
 
+//for tracking mode
+//
+//
+/*
+void InitADC (void)
+{
+	// Init ADC
+	ADC0CF = 0xF8; // SAR clock = 31, Right-justified result
+	ADC0CN = 0b_1000_0000; // AD0EN=1, AD0TM=0
+  	REF0CN = 0b_0000_1000; //Select VDD as the voltage reference for the converter
+}
+
+void InitPinADC (unsigned char portno, unsigned char pinno)
+{
+	unsigned char mask;
+	
+	mask=1<<pinno;
+	P2MDIN &= (~mask); // Set pin as analog input
+	P2SKIP |= mask; // Skip Crossbar decoding for this pin
+}
+*/
+unsigned int ADC_at_Pin(unsigned char pin)
+{
+	AMX0P = pin;             // Select positive input from pin
+	AMX0N = LQFP32_MUX_GND;  // GND is negative input (Single-ended Mode)
+	// Dummy conversion first to select new pin
+	AD0BUSY=1;
+	while (AD0BUSY); // Wait for dummy conversion to finish
+	// Convert voltage at the pin
+	AD0BUSY = 1;
+	while (AD0BUSY); // Wait for conversion to complete
+	return (ADC0L+(ADC0H*0x100));
+}
+
+float Volts_at_Pin(unsigned char pin)
+{
+	 return ((ADC_at_Pin(pin)*VDD)/1024.0);
+}
+//
+//
+////////////////////////////////////////////////
+	
+	
 void main(void){
+	
 	
     //unsigned long int testNumber; 
     int i; 
     int left_power = 0, right_power = 0;
     bit left_dir = 1, right_dir = 1, other_button = 0;
     int power;
+    int flaaag = 0;
+  //  int V60cm;
+    //unsigned char vRecleft, vRecleft;
     
     //int testArray[32];
   	
@@ -378,25 +438,14 @@ void main(void){
 	//interrupt_counter = 5;	
 	
 	EA = 1;
-	
-	
+//	V60cm=Volts_at_Pin(LQFP32_MUX_P2_0);
+//	V60cm= V60cm/2 + Volts_at_Pin(LQFP32_MUX_P2_1)/2;
 	
 	while(1)
 	{
 		SFRPAGE = 0xF;
 		EIE2 |= ET5;
 		SFRPAGE = 0;
-		
-		//wait for the first bit to come in
-		//Temporarily changed for testing purposes 
-		//while(b == MODE_BIT);
-		//double check this logic
-		//mode = signal[12] ? 0:1;      //need to know size of start 
-		//mode = joystick; 
-		//printf("\nYEEEEE"); 
-		//decode the signal if you are in this mode
-		//if(mode == joystick)
-		//{
 		
 			if(buffer_full)
 			{
@@ -425,54 +474,16 @@ void main(void){
 				power = binary2int(7, 9);
 				parse_power(&power);
 				printf("\npower:%d", power);
-				/*
-				left_power = binary2int(6, 8);
-				parse_power(&left_power);
-				printf("\nleftpow:%i", left_power);
-				
-				right_power = binary2int(11, 13);
-				parse_power(&right_power);
-				printf("\nrightpow:%i\n", right_power);
-				*/
 						
 				EIE2 |= 0b_0010_0000;
 			}
 			
 			
-			/*
-			//printf("\nYEEEEE"); 
-			//enable timer 5
-			printf("\n%u", b); 
-			while(b != DIRECTION);
-			printf("\n%u", b); 
-			//call a function to interpret that bit of the signal
-            direction(signal[DIRECTION], signal[DIRECTION+1]); 
-			printf("\n%u", b);
-			while(b != POWER1);
-			//call function to convert power
-			temp_1 = binary2int(POWER1, POWER2-1);
-            left_motor_power(temp_1); 
-            printf("%u\n, %u\n, %u\n, %u\n, ", LF, RF, LB, RB); 
-            
 			
-			while(b != POWER2);
-			//call a function to convert power
-			temp_2 = binary2int(POWER2, 31);
-            right_motor_power(temp_2);
-            */
 		
 		
-		//if(mode == joystick)
-		if(1)
-		
+		if(mode == JOYSTICK)
 		{
-			/*
-			direction(left_dir, right_dir); 
-					
-	        left_motor_power(left_power); 
-					
-	        right_motor_power(right_power);
-			*/
 			
 			direction(left_dir, right_dir); 
 					
@@ -483,11 +494,96 @@ void main(void){
 		}
 		
 		//maintain a constant, programeable distance from the controller
-		else if (mode == tether)
+		else if (mode == TETHER)
 		{
+			float vRecleft, vRecright; 
 			
-			//disable timer 5
+			//keep checking the voltage received from the magnetic field (another timer?)
+			//haven't add tolerance
+			//not sure whether if(buffer) thing should be in mode joystick
 			
+			vRecleft=Volts_at_Pin(LQFP32_MUX_P2_0);
+			vRecright=Volts_at_Pin(LQFP32_MUX_P2_1);
+			
+			printf("\nLeft Voltage: %f", vRecleft); 
+			printf("\nRight Voltage: %f", vRecright); 
+			/*
+		
+			if(((vRecleft>V60cm) && (vRecright>V60cm)) && (vRecleft==vRecright)){
+			   left_dir = 1;
+			   right_dir = 1;
+			   direction(left_dir, right_dir);
+			   left_motor_power(60);    
+			   right_motor_power(60);
+			}
+			  
+			if(((vRecleft<V60cm) && (vRecright<V60cm)) && (vRecleft==vRecright)){
+			   left_dir = 0;
+			   right_dir = 0;
+			   direction(left_dir, right_dir);
+			   left_motor_power(60);     
+			   right_motor_power(60);
+			}
+			 
+			if(vRecright>vRecleft){
+		       //turn right
+			   left_dir = 0;
+			   right_dir = 1;
+			   direction(left_dir, right_dir);
+			   left_motor_power(60);   
+			   right_motor_power(60);
+		    }
+		    if(vRecleft>vRecright){
+		       //turn left
+		       left_dir = 1;
+			   right_dir = 0;
+			   direction(left_dir, right_dir);
+			   left_motor_power(60);    
+			   right_motor_power(60);
+		    }
+			*/
+			if( abs(vRecleft - vRecright)<=TOLERANCE && abs(vRecright - V60cm) <= TOLERANCE) {
+				left_dir = 1;
+				right_dir = 1;
+				direction(left_dir, right_dir);
+			    left_motor_power(0);    
+			    right_motor_power(0);
+			}
+			if(((vRecleft>V60cm) && (vRecright>V60cm)) || ((vRecleft<V60cm) && (vRecright<V60cm))){
+				if((vRecleft>V60cm) && (vRecright>V60cm)){
+				   left_dir = 1;
+				   right_dir = 1;
+				   direction(left_dir, right_dir);
+				   left_motor_power(60);    
+				   right_motor_power(60);
+				}
+				  
+				if((vRecleft<V60cm) && (vRecright<V60cm)){
+				   left_dir = 0;
+				   right_dir = 0;
+				   direction(left_dir, right_dir);
+				   left_motor_power(60);     
+				   right_motor_power(60);
+				}
+			}
+			else{
+				if(vRecright>vRecleft){
+			       //turn right
+				   left_dir = 0;
+				   right_dir = 1;
+				   direction(left_dir, right_dir);
+				   left_motor_power(60);   
+				   right_motor_power(60);
+			    }
+			    if(vRecleft>vRecright){
+			       //turn left
+			       left_dir = 1;
+				   right_dir = 0;
+				   direction(left_dir, right_dir);
+				   left_motor_power(60);    
+				   right_motor_power(60);
+			    }
+			}
 		}
 	}
 }
