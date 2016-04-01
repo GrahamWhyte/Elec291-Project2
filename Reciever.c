@@ -26,9 +26,11 @@
 #define START_SIZE 5
 #define SIGNAL_SIZE 10
 
-#define TOLERANCE 0.3
+#define DIRECTION_TOLERANCE 0.05
+#define TRACKING_VOLTAGE 2.90
 
-#define V60cm 2   //voltage when exactly at tracking distance
+#define TRACKING_TOLERANCE 0.01
+
 
 #define PUSH_SFRPAGE _asm push _SFRPAGE _endasm
 #define POP_SFRPAGE _asm pop _SFRPAGE _endasm
@@ -43,7 +45,6 @@ volatile unsigned char LF, LB, RF, RB, signal_counter, start_counter, interrupt_
 volatile bit right_motor, back_right_motor, left_motor, back_left_motor; 
 volatile bit  c, buffer_full, flag;
 volatile int sum;
-
 
 
 char _c51_external_startup (void)
@@ -368,9 +369,14 @@ float Volts_at_Pin(unsigned char pin)
 {
 	 return ((ADC_at_Pin(pin)*VDD)/1024.0);
 }
-//
-//
-////////////////////////////////////////////////
+
+void get_values( float* left, float* right, float* coef, float* dist)
+{
+	*left = Volts_at_Pin(LQFP32_MUX_P2_0);
+	*right = Volts_at_Pin(LQFP32_MUX_P2_1);
+	*coef = ((*left)/(*right));
+	*dist = (*left + *right)/2;
+}
 	
 	
 void main(void){
@@ -378,7 +384,9 @@ void main(void){
 	
     //unsigned long int testNumber; 
     int i; 
+	float vRecleft, vRecright;
     int left_power = 0, right_power = 0;
+	float dir_coef, dist;
     bit left_dir = 1, right_dir = 1, other_button = 0;
     int power;
     int flaaag = 0;
@@ -494,96 +502,61 @@ void main(void){
 		}
 		
 		//maintain a constant, programeable distance from the controller
+		//coef = left/right
 		else if (mode == TETHER)
 		{
-			float vRecleft, vRecright; 
-			
-			//keep checking the voltage received from the magnetic field (another timer?)
-			//haven't add tolerance
-			//not sure whether if(buffer) thing should be in mode joystick
-			
-			vRecleft=Volts_at_Pin(LQFP32_MUX_P2_0);
-			vRecright=Volts_at_Pin(LQFP32_MUX_P2_1);
-			
-			printf("\nLeft Voltage: %f", vRecleft); 
-			printf("\nRight Voltage: %f", vRecright); 
-			/*
-		
-			if(((vRecleft>V60cm) && (vRecright>V60cm)) && (vRecleft==vRecright)){
-			   left_dir = 1;
-			   right_dir = 1;
-			   direction(left_dir, right_dir);
-			   left_motor_power(60);    
-			   right_motor_power(60);
-			}
-			  
-			if(((vRecleft<V60cm) && (vRecright<V60cm)) && (vRecleft==vRecright)){
-			   left_dir = 0;
-			   right_dir = 0;
-			   direction(left_dir, right_dir);
-			   left_motor_power(60);     
-			   right_motor_power(60);
-			}
-			 
-			if(vRecright>vRecleft){
-		       //turn right
-			   left_dir = 0;
-			   right_dir = 1;
-			   direction(left_dir, right_dir);
-			   left_motor_power(60);   
-			   right_motor_power(60);
-		    }
-		    if(vRecleft>vRecright){
-		       //turn left
-		       left_dir = 1;
-			   right_dir = 0;
-			   direction(left_dir, right_dir);
-			   left_motor_power(60);    
-			   right_motor_power(60);
-		    }
-			*/
-			if( abs(vRecleft - vRecright)<=TOLERANCE && abs(vRecright - V60cm) <= TOLERANCE) {
-				left_dir = 1;
-				right_dir = 1;
-				direction(left_dir, right_dir);
-			    left_motor_power(0);    
-			    right_motor_power(0);
-			}
-			if(((vRecleft>V60cm) && (vRecright>V60cm)) || ((vRecleft<V60cm) && (vRecright<V60cm))){
-				if((vRecleft>V60cm) && (vRecright>V60cm)){
-				   left_dir = 1;
-				   right_dir = 1;
-				   direction(left_dir, right_dir);
-				   left_motor_power(60);    
-				   right_motor_power(60);
+			get_values(&vRecleft, &vRecright,&dir_coef, &dist);
+			printf("%f %f %f %f\n",vRecleft, vRecright,dir_coef, dist);
+			printf("Orientation Tracking\n");
+			while(dir_coef < 1- DIRECTION_TOLERANCE || dir_coef > 1 + DIRECTION_TOLERANCE)
+			{
+				printf("\x1b[2J\x1b[1;1H"); // Clear screen using ANSI escape sequence.
+				printf("\rDirection Coefficient: %f", dir_coef);
+				
+				if(dir_coef < 1 - DIRECTION_TOLERANCE)
+				{
+					printf("Right Turn\n");
+					direction(1, 0);
+					left_motor_power(10); 	
+					right_motor_power(10);
 				}
-				  
-				if((vRecleft<V60cm) && (vRecright<V60cm)){
-				   left_dir = 0;
-				   right_dir = 0;
-				   direction(left_dir, right_dir);
-				   left_motor_power(60);     
-				   right_motor_power(60);
+				
+				if(dir_coef > 1 + DIRECTION_TOLERANCE)
+				{
+					printf("Left Turn\n");
+					direction(0, 1);
+					left_motor_power(10); 	
+					right_motor_power(10);
+				
 				}
+				get_values(&vRecleft, &vRecright, &dir_coef, &dist);
+				
 			}
-			else{
-				if(vRecright>vRecleft){
-			       //turn right
-				   left_dir = 0;
-				   right_dir = 1;
-				   direction(left_dir, right_dir);
-				   left_motor_power(60);   
-				   right_motor_power(60);
-			    }
-			    if(vRecleft>vRecright){
-			       //turn left
-			       left_dir = 1;
-				   right_dir = 0;
-				   direction(left_dir, right_dir);
-				   left_motor_power(60);    
-				   right_motor_power(60);
-			    }
+			
+			printf("Distance Tracking\n");
+			while(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE || dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE)
+			{
+			 // Clear screen using ANSI escape sequence.
+				printf("Distance: %f/r", dist);
+				
+				if(dist < TRACKING_VOLTAGE + TRACKING_TOLERANCE )
+				{
+					printf("Backward\n");
+					direction(0, 0);
+					left_motor_power(10); 	
+					right_motor_power(10);
+				}
+				if(dist > TRACKING_VOLTAGE - TRACKING_TOLERANCE)
+				{	
+					printf("Forward Turn\n");
+					direction(1, 1);
+					left_motor_power(10); 	
+					right_motor_power(10);
+				}
+				get_values(&vRecleft,&vRecright,&dir_coef,&dist);
 			}
+			printf("Done Tracking Mode\n");
 		}
+
 	}
 }
