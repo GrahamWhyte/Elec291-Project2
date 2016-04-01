@@ -464,9 +464,8 @@ void main (void)
 		acc_x=rbuf[2]*4; 
 		acc_y=rbuf[3]*4;
 		acc_z=rbuf[4]*4;
-
-		but1=(rbuf[5] & 0x01)?1:0;
-		but2=(rbuf[5] & 0x02)?1:0;
+		but1=!((rbuf[5] & 0x01)?1:0);
+		but2=!((rbuf[5] & 0x02)?1:0);
 		if (rbuf[5] & 0x04) acc_x+=2;
 		if (rbuf[5] & 0x08) acc_x+=1;
 		if (rbuf[5] & 0x10) acc_y+=2;
@@ -478,45 +477,45 @@ void main (void)
 		RF = 0;
 		LB = 0;
 		RB = 0;
-		/*
-		Decode_Signal(joy_x, joy_y);
-		
-		if(LF >  0)
-		{
-			left_power = (int)LF;
-			l_dir = 1;
-			left_power = round_to_ten(left_power);
-		}
-		else if(LB > 0)
-		{
-			left_power = (int)LB;
-			left_power = round_to_ten(left_power);
-			l_dir = 0;
-		}
-		else
-		{
-			left_power = 0;
-			l_dir = 1;
-		}
-		if(RF >  0)
-		{
-			right_power = (int)RF;
-			right_power = round_to_ten(right_power);
-			r_dir = 1;
-		}
-		else if(RB > 0)
-		{
-			right_power = (int)RB;
-			right_power = round_to_ten(right_power);
-			r_dir = 0;
-		}
-		else
-		{
-			right_power = 0;
-			r_dir = 1;
-		}
-		*/
 
+	  if(but1)
+	  	{
+	  
+		  	printf("\nTracking Mode!\n");
+		  	Timer4ms(50);
+			while(but1)
+			{
+				nunchuck_getdata(rbuf);
+		 		but1 = !((rbuf[5] & 0x01)?1:0);
+		 		Timer4ms(50);
+			}
+			OUT1 = 0;
+			OUT0 = 1;
+			TR2 = 1;
+			printf("\nTracking Mode!\n");
+			Timer4ms(50);
+	    	while(!but1)
+			{
+			nunchuck_getdata(rbuf);
+		 	but1 = !((rbuf[5] & 0x01)?1:0);
+		 	Timer4ms(50);
+			}
+			printf("\nTracking Mode!\n");
+			Timer4ms(50);
+			while(but1)
+			{
+				nunchuck_getdata(rbuf);
+		 		but1 = !((rbuf[5] & 0x01)?1:0);
+		 		Timer4ms(50);
+			}
+			OUT1 =0;
+			OUT0 = 0;
+			TR2 = 0;
+			printf("\nControl!\n");
+		}
+	else
+	{
+			
 		l_dir = 1;
 		r_dir = 1;
 		power = 0;
@@ -547,40 +546,17 @@ void main (void)
 			power = (int) -1*((float)joy_y/127)*100/14;
 		}
 			
-		
-		printf("\npower: %d", power);
-
-		/*
-		printf("\x1b[2J\x1b[1;1H");
-		printf("%d %d\n", left_power, right_power);
-		printf("%d %d", l_dir, r_dir);
-		printf("\n%f %f %f %f\n", LF, LB, RF, RB);
-	
 		send_int(START_SIGNAL, 5);
 		send_bit(0); 
-		send_bit(!but1);
-		send_bit(!but2);
-		send_bit(l_dir);
-		send_bit(r_dir);
-		send_bit(0);
-		send_int(left_power,3);
-		send_bit(0);
-		send_bit(0);
-		send_int(right_power,3);
-		send_int(0, 4);
-	*/
-	
-		send_int(START_SIGNAL, 5);
-		send_bit(0); 
-		send_bit(!but1);
-		send_bit(!but2);
+		send_bit(but1);
+		send_bit(but2);
 		send_bit(l_dir);
 		send_bit(r_dir);
 		send_bit(0);
 		send_bit(0);
 		send_int(power,3);
 		send_int(0, 4);
-	
+	}
 
   }
 }
