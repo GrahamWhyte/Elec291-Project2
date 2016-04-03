@@ -3,7 +3,6 @@
 
 #define  SYSCLK         48000000L // System clock frequency in Hz
 #define  BAUDRATE       115200L
-#define  DATABAUD		111111L 		//MUST CHANGE
 
 //ASSIGN PROPER PINS
 #define  LEFT_FORWARD    P2_5
@@ -18,18 +17,16 @@
 //all of there need to be confirmed
 #define JOYSTICK  0
 #define TETHER    1
-#define MODE_BIT  12
-#define DIRECTION 14
-#define POWER1    17
-#define POWER2    25
 
 #define START_SIZE 5
 #define SIGNAL_SIZE 10
 
+#define HIT_MILLISECS 2000
 #define DIRECTION_TOLERANCE 0.105
 #define TRACKING_VOLTAGE 2.50
 #define TRACKING_TOLERANCE 0.205
 #define SPEED 40
+#define HIT_SPEED 50
 
 #define PUSH_SFRPAGE _asm push _SFRPAGE _endasm
 #define POP_SFRPAGE _asm pop _SFRPAGE _endasm
@@ -39,10 +36,9 @@
 
 volatile unsigned char signal[SIGNAL_SIZE];
 volatile unsigned char pwm_count;
-volatile bit           mode;
 volatile unsigned char LF, LB, RF, RB, signal_counter, start_counter, interrupt_counter;
-volatile bit right_motor, back_right_motor, left_motor, back_left_motor; 
-volatile bit  c, buffer_full, flag;
+volatile bit right_motor, back_right_motor, left_motor, back_left_motor, mode; 
+volatile bit buffer_full, flag, extern0_flag, extern1_flag;
 volatile int sum;
 
 
@@ -93,11 +89,17 @@ char _c51_external_startup (void)
 	P1MDOUT=0b_0000_0000;
 	P1 = 0b_1000_0000;
 	P2MDOUT|=0b_0011_1100;
+	//P0MDOUT&=0b_1111_0111;
 	P0MDOUT |= 0b_0001_0100; // Enable UTX as push-pull output
+	//P0 &= 0b_1111_0111;
+	//P0 |= 0b_0000_1000;
 	XBR0     = 0b_0000_0001; // Enable UART on P0.4(TX) and P0.5(RX)                     
 	XBR1     = 0b_0100_0000; // Enable crossbar and weak pull-ups
 	
-	P1MDIN &= 0b1000_0000; //Pin 1_7 
+	P1MDIN &= 0b1000_0000; //Pin 1_7
+	
+	P0MDIN &= 0b_1011_0111; 
+	P0MDIN |= 0b_0100_1000; //Pin 0_3 and 0_6
 	
 	
 	//Peak Detector 
@@ -119,6 +121,20 @@ char _c51_external_startup (void)
 	ET2=1;         // Enable Timer2 interrupts
 	TR2=1;         // Start Timer2
 	
+	//intitalize P0.3 as external interrupt
+	IT0 = 1;
+	IE0 = 0;
+	IT01CF = 0b_0110_0011; //Active low, P0.3
+	EX0=1; //Enable external interrupt 0 
+	
+	//initialize P0.6 as external interrupt 
+	IT1 = 1; 
+	IE1 = 0;
+	//IT01CF = 0b_0110_0000; //Active low, P0.6 
+	EX1=1; 
+	
+	
+	
 	// Initialize timer 5 for periodic interrupts
 	SFRPAGE = 0xF;
 	TMR5CN=0x00;   // Stop Timer5; Clear TF5;
@@ -133,6 +149,7 @@ char _c51_external_startup (void)
 	TMR5=0xffff;   // Set to reload immediately
 	EIE2 |= ET5;        // Enable Timer5 interrupts
 	TR5=1;         // Start Timer5
+
 
 	return 0;
 }
@@ -216,6 +233,7 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 //this timer will control the power to both motors through pulse width modulation
 void Timer2_ISR (void) interrupt 5
 {
+	PUSH_SFRPAGE;
 	SFRPAGE = 0x0;
 	TF2H = 0; // Clear Timer2 interrupt flag
 
@@ -236,6 +254,27 @@ void Timer2_ISR (void) interrupt 5
 	if(RF == 0){
 		RIGHT_BACKWARD=pwm_count>RB?0:1;
 	}
+	
+	POP_SFRPAGE;
+}
+
+void External_0_ISR(void) interrupt 0	//External 0 is interrupt 0, external 1 is interrupt 2
+{
+	PUSH_SFRPAGE;
+	SFRPAGE = 0x0;
+
+	extern0_flag = 1;
+	
+	POP_SFRPAGE;
+}
+void External_1_ISR(void) interrupt 2	//External 0 is interrupt 0, external 1 is interrupt 2
+{
+	PUSH_SFRPAGE;
+	SFRPAGE = 0x0;
+
+	extern1_flag = 1;
+	
+	POP_SFRPAGE;
 }
 
 int pow( int base, int exp){
@@ -264,6 +303,29 @@ int binary2int(int start, int stop){
 		num += signal[counter]*pow(2, stop - counter);
 
 	return num;
+}
+
+void Timer4ms(unsigned char ms)
+{
+	unsigned char i;// usec counter
+	unsigned char k;
+	
+	k=SFRPAGE;
+	SFRPAGE=0xf;
+	// The input for Timer 4 is selected as SYSCLK by setting bit 0 of CKCON1:
+	CKCON1|=0b_0000_0001;
+	
+	TMR4RL = 65536-(SYSCLK/1000L); // Set Timer4 to overflow in 1 ms.
+	TMR4 = TMR4RL;                 // Initialize Timer4 for first overflow
+	
+	TMR4CN = 0x04;                 // Start Timer4 and clear overflow flag
+	for (i = 0; i < ms; i++)       // Count <ms> overflows
+	{
+		while (!(TMR4CN & 0x80));  // Wait for overflow
+		TMR4CN &= ~(0x80);         // Clear overflow indicator
+	}
+	TMR4CN = 0 ;                   // Stop Timer4 and clear overflow flag
+	SFRPAGE=k;	
 }
 
 void direction(unsigned char left, unsigned char right)
@@ -393,6 +455,7 @@ void main(void){
     int power;
     int flaaag = 0;
     unsigned char page_save;
+    int l;
   //  int V60cm;
     //unsigned char vRecleft, vRecleft;
     
@@ -413,6 +476,8 @@ void main(void){
 	buffer_full = 0;
 	flag = 0;
 	interrupt_counter = 0;
+	extern0_flag = 0;
+	extern1_flag = 0;
 	
 	sum = 0;
 	power = 0;
@@ -421,7 +486,7 @@ void main(void){
 	//Specifically for testing, remove later 
 	printf("Enter integer\n");
 	//scanf("%lu", &testNumber); 
-	testNumber = 0b_00_11_0_111_0_111; 
+	testNumber =0b_0_00_11_00_100; 
 	printf("\n%lu\n", testNumber); 
 	for (i=0; i<SIGNAL_SIZE; i++)
 	{
@@ -442,8 +507,8 @@ void main(void){
 	
 	
 	//wait when we start until the first start sequence
-	while(!SIGNAL_IN)
-		printf("%u", SIGNAL_IN);
+	//while(!SIGNAL_IN)
+	//	printf("%u", SIGNAL_IN);
 	
 	printf("hi");
 	//interrupt_counter = 5;	
@@ -454,119 +519,155 @@ void main(void){
 	
 	while(1)
 	{
-	
-		
-    	page_save=SFRPAGE;
-    	SFRPAGE=0xF;
-    	EIE2 |= ET5;
-		SFRPAGE=page_save;
-	/*	
-			if(buffer_full)
+		if(!extern0_flag && !extern1_flag)
+		{
+	    	page_save=SFRPAGE;
+	    	SFRPAGE=0xF;
+	    	EIE2 |= ET5;
+			SFRPAGE=page_save;
+			
+				if(buffer_full)
+				{
+					printf("\nBuffer full\n");
+					printf("Received Signal: ");
+					
+					for (i=0; i<SIGNAL_SIZE; i++) 
+						printf("%u", signal[i]); 
+					
+					EIE2 &= 0b_1101_1111;
+					
+					buffer_full = 0;
+					
+					printf("\npad: %u", signal[0]);
+					mode = signal[1];
+					printf("\nmode:%u", mode);
+					
+					other_button = signal[2];
+					printf("\nbutton:%u", other_button);
+					
+					left_dir = signal[3];
+					printf("\nleftdir:%u", left_dir);
+					
+					right_dir = signal[4];
+					printf("\nrightdir:%u", right_dir);
+					
+					power = binary2int(7, 9);
+					parse_power(&power);
+					printf("\npower:%d", power);
+							
+					EIE2 |= 0b_0010_0000;
+				}
+				
+				
+				
+			
+			
+			if(mode == JOYSTICK)
 			{
-				printf("\nBuffer full\n");
-				printf("Received Signal: ");
-				for (i=0; i<SIGNAL_SIZE; i++) 
-					printf("%u", signal[i]); 
 				
-				EIE2 &= 0b_1101_1111;
-				
-				buffer_full = 0;
-				
-				printf("\npad: %u", signal[0]);
-				mode = signal[1];
-				printf("\nmode:%u", mode);
-				
-				other_button = signal[2];
-				printf("\nbutton:%u", other_button);
-				
-				left_dir = signal[3];
-				printf("\nleftdir:%u", left_dir);
-				
-				right_dir = signal[4];
-				printf("\nrightdir:%u", right_dir);
-				
-				power = binary2int(7, 9);
-				parse_power(&power);
-				printf("\npower:%d", power);
+				direction(left_dir, right_dir); 
 						
-				EIE2 |= 0b_0010_0000;
+		        left_motor_power(power); 
+						
+		        right_motor_power(power);
+			
 			}
 			
-			
-			
-		
-		
-		if(mode == JOYSTICK)
-		{
-			
-			direction(left_dir, right_dir); 
-					
-	        left_motor_power(power); 
-					
-	        right_motor_power(power);
-		
-		}*/
-		
-		//maintain a constant, programeable distance from the controller
-		//coef = left/right
-		//void direction(unsigned char left, unsigned char right)
-		/*elseif (mode == TETHER)*/
-		{
-			vRecleft= 0;
-			vRecright = 0;
-			dir_coef = 0;
-			dist= 0;
-			left_motor_power(0); 	
-			right_motor_power(0);
-			get_values(&vRecleft, &vRecright,&dir_coef, &dist);
-			printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
-			while(dir_coef < 1- DIRECTION_TOLERANCE || dir_coef > 1 + DIRECTION_TOLERANCE)
+			//maintain a constant, programeable distance from the controller
+			//coef = left/right
+			//void direction(unsigned char left, unsigned char right)
+			else if (mode == TETHER)
 			{
+				vRecleft= 0;
+				vRecright = 0;
+				dir_coef = 0;
+				dist= 0;
 				left_motor_power(0); 	
 				right_motor_power(0);
-				if(dir_coef < 1 - DIRECTION_TOLERANCE)
-				{
-					direction(0, 1);
-					left_motor_power(SPEED); 	
-					right_motor_power(SPEED);
-				}
-				
-				get_values(&vRecleft, &vRecright, &dir_coef, &dist);
-				if(dir_coef > 1 + DIRECTION_TOLERANCE)
-				{
-					direction(1, 0);
-					left_motor_power(SPEED); 	
-					right_motor_power(SPEED);
-				
-				}
-				get_values(&vRecleft, &vRecright, &dir_coef, &dist);
+				get_values(&vRecleft, &vRecright,&dir_coef, &dist);
 				printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
-			}
-				
-			while(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE || dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE)
-			{
-			 
+				while(dir_coef < 1- DIRECTION_TOLERANCE || dir_coef > 1 + DIRECTION_TOLERANCE)
+				{
+					left_motor_power(0); 	
+					right_motor_power(0);
+					if(dir_coef < 1 - DIRECTION_TOLERANCE)
+					{
+						direction(0, 1);
+						left_motor_power(SPEED); 	
+						right_motor_power(SPEED);
+					}
+					
+					get_values(&vRecleft, &vRecright, &dir_coef, &dist);
+					if(dir_coef > 1 + DIRECTION_TOLERANCE)
+					{
+						direction(1, 0);
+						left_motor_power(SPEED); 	
+						right_motor_power(SPEED);
+					
+					}
+					get_values(&vRecleft, &vRecright, &dir_coef, &dist);
+					printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+				}
+					
+				while(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE || dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE)
+				{
+				 
+					left_motor_power(0); 	
+					right_motor_power(0);
+					if(dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE )
+					{
+						direction(0, 0);
+						left_motor_power(SPEED); 	
+						right_motor_power(SPEED);
+					}
+					get_values(&vRecleft,&vRecright,&dir_coef,&dist);
+					if(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE)
+					{	
+						direction(1, 1);
+						left_motor_power(SPEED); 	
+						right_motor_power(SPEED);
+					}
+					get_values(&vRecleft,&vRecright,&dir_coef,&dist);
+					printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+				}
 				left_motor_power(0); 	
 				right_motor_power(0);
-				if(dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE )
-				{
-					direction(0, 0);
-					left_motor_power(SPEED); 	
-					right_motor_power(SPEED);
-				}
-				get_values(&vRecleft,&vRecright,&dir_coef,&dist);
-				if(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE)
-				{	
-					direction(1, 1);
-					left_motor_power(SPEED); 	
-					right_motor_power(SPEED);
-				}
-				get_values(&vRecleft,&vRecright,&dir_coef,&dist);
-				printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
 			}
-			left_motor_power(0); 	
+		}
+		else if(extern0_flag)
+		{
+			printf("\nExternal interrupt 0 triggered\n");
+		
+			direction(0, 0);
+			left_motor_power(HIT_SPEED);
+			right_motor_power(HIT_SPEED);
+			
+			for(l=0; l<HIT_MILLISECS;l++)
+				Timer4ms(1);
+			
+			printf("External interrupt 0 finished\n");
+			
+			extern0_flag = 0;
+			left_motor_power(0);
 			right_motor_power(0);
 		}
-
+		else if(extern1_flag)
+		{
+			printf("\nExternal interrupt 1triggered\n");
+		
+			direction(1, 1);
+			left_motor_power(HIT_SPEED);
+			right_motor_power(HIT_SPEED);
+			
+			for(l=0; l<HIT_MILLISECS;l++)
+				Timer4ms(1);
+			
+			printf("External interrupt 1 finished\n");
+			
+			extern1_flag = 0;
+			left_motor_power(0);
+			right_motor_power(0);
+		}
+		
 	}
 }
