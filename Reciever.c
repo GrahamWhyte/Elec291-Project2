@@ -21,12 +21,13 @@
 #define START_SIZE 5
 #define SIGNAL_SIZE 10
 
-#define HIT_MILLISECS 2000
+#define HIT_MILLISECS 1000
 #define DIRECTION_TOLERANCE 0.105
-#define TRACKING_VOLTAGE 2.50
-#define TRACKING_TOLERANCE 0.205
-#define SPEED 40
+#define TRACKING_VOLTAGE 1.00
+#define TRACKING_TOLERANCE 0.05
+#define SPEED 30
 #define HIT_SPEED 50
+#define AVERAGE 5
 
 #define PUSH_SFRPAGE _asm push _SFRPAGE _endasm
 #define POP_SFRPAGE _asm pop _SFRPAGE _endasm
@@ -40,6 +41,7 @@ volatile unsigned char LF, LB, RF, RB, signal_counter, start_counter, interrupt_
 volatile bit right_motor, back_right_motor, left_motor, back_left_motor, mode; 
 volatile bit buffer_full, flag, extern0_flag, extern1_flag;
 volatile int sum;
+volatile int l;
 
 
 char _c51_external_startup (void)
@@ -118,6 +120,7 @@ char _c51_external_startup (void)
 	CKCON|=0b_0001_0000;
 	TMR2RL=(-(SYSCLK/(2*48))/(100L)); // Initialize reload value
 	TMR2=0xffff;   // Set to reload immediately
+	PT2=1;			//Set to high priority
 	ET2=1;         // Enable Timer2 interrupts
 	TR2=1;         // Start Timer2
 	
@@ -244,38 +247,36 @@ void Timer2_ISR (void) interrupt 5
 	
 	if(LB == 0){
 		LEFT_FORWARD=pwm_count>LF?0:1;
+		LEFT_BACKWARD = 0;
 	}
-	if(LF == 0){
+	else if(LF == 0){
 		LEFT_BACKWARD=pwm_count>LB?0:1;
+		LEFT_FORWARD = 0;
 	}
+	else
+	{
+		LEFT_FORWARD = 0;
+		LEFT_BACKWARD = 0;
+	}
+	
 	if(RB == 0){
 		RIGHT_FORWARD=pwm_count>RF?0:1;
+		RIGHT_BACKWARD = 0;
 	}
-	if(RF == 0){
+	else if(RF == 0){
 		RIGHT_BACKWARD=pwm_count>RB?0:1;
+		RIGHT_FORWARD = 0;
 	}
+	else
+	{
+		RIGHT_FORWARD = 0;
+		RIGHT_BACKWARD = 0;
+		}
 	
 	POP_SFRPAGE;
 }
 
-void External_0_ISR(void) interrupt 0	//External 0 is interrupt 0, external 1 is interrupt 2
-{
-	PUSH_SFRPAGE;
-	SFRPAGE = 0x0;
 
-	extern0_flag = 1;
-	
-	POP_SFRPAGE;
-}
-void External_1_ISR(void) interrupt 2	//External 0 is interrupt 0, external 1 is interrupt 2
-{
-	PUSH_SFRPAGE;
-	SFRPAGE = 0x0;
-
-	extern1_flag = 1;
-	
-	POP_SFRPAGE;
-}
 
 int pow( int base, int exp){
 
@@ -388,9 +389,55 @@ void right_motor_power(int power)
         RB = 0; 
 }
 
-void parse_power(int *power)
+void parse_power(int *power, bit dir1, bit dir2)
 {
-	*power = *power * 14;
+	if(dir1 ^ dir2)
+		*power = *power * 10;
+	else
+		*power = *power * 14;
+}
+
+void External_0_ISR(void) interrupt 0	//External 0 is interrupt 0, external 1 is interrupt 2
+{
+	PUSH_SFRPAGE;
+	SFRPAGE = 0x0;
+
+	extern0_flag = 1;
+		
+			direction(0, 0);
+			left_motor_power(HIT_SPEED);
+			right_motor_power(HIT_SPEED);
+			
+			for(l=0; l<HIT_MILLISECS;l++)
+				Timer4ms(1);
+			
+			extern0_flag = 0;
+			left_motor_power(0);
+			right_motor_power(0);
+	
+	POP_SFRPAGE;
+}
+void External_1_ISR(void) interrupt 2	//External 0 is interrupt 0, external 1 is interrupt 2
+{
+	PUSH_SFRPAGE;
+	SFRPAGE = 0x0;
+
+	extern1_flag = 1;
+	
+		
+			direction(1, 1);
+			left_motor_power(HIT_SPEED);
+			right_motor_power(HIT_SPEED);
+			
+			for(l=0; l<HIT_MILLISECS;l++)
+				Timer4ms(1);
+			
+			
+			extern1_flag = 0;
+			left_motor_power(0);
+			right_motor_power(0);
+	
+	POP_SFRPAGE;
 }
 
 //for tracking mode
@@ -437,8 +484,8 @@ float Volts_at_Pin(unsigned char pin)
 
 void get_values( float* left, float* right, float* coef, float* dist)
 {
-	*left = Volts_at_Pin(LQFP32_MUX_P2_1);
-	*right = Volts_at_Pin(LQFP32_MUX_P2_0);
+	*left = (*left)*(float)(AVERAGE/10.0) + (float)((10 - AVERAGE)/10.0)*Volts_at_Pin(LQFP32_MUX_P2_1);
+	*right = (*right)*(float)(AVERAGE/10.0) + (float)((10-AVERAGE)/10.0)*Volts_at_Pin(LQFP32_MUX_P2_0);
 	*coef = ((*left)/(*right));
 	*dist = (*left + *right)/2;
 }
@@ -449,13 +496,12 @@ void main(void){
 	
     //unsigned long int testNumber; 
     int i; 
-	float vRecleft, vRecright, dir_coef = 0, dist= 0;
+	float vRecleft = 0, vRecright= 0, dir_coef = 0, dist= 0;
     int left_power = 0, right_power = 0;
     bit left_dir = 1, right_dir = 1, other_button = 0;
     int power;
     int flaaag = 0;
     unsigned char page_save;
-    int l;
   //  int V60cm;
     //unsigned char vRecleft, vRecleft;
     
@@ -552,7 +598,7 @@ void main(void){
 					printf("\nrightdir:%u", right_dir);
 					
 					power = binary2int(7, 9);
-					parse_power(&power);
+					parse_power(&power, left_dir, right_dir);
 					printf("\npower:%d", power);
 							
 					EIE2 |= 0b_0010_0000;
@@ -564,7 +610,8 @@ void main(void){
 			
 			if(mode == JOYSTICK)
 			{
-				
+			
+				printf("PING!!!!");				
 				direction(left_dir, right_dir); 
 						
 		        left_motor_power(power); 
@@ -586,54 +633,44 @@ void main(void){
 				right_motor_power(0);
 				get_values(&vRecleft, &vRecright,&dir_coef, &dist);
 				printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
-				while(dir_coef < 1- DIRECTION_TOLERANCE || dir_coef > 1 + DIRECTION_TOLERANCE)
+				while(dir_coef < 1- DIRECTION_TOLERANCE || dir_coef > 1 + DIRECTION_TOLERANCE || dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE || dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE)
 				{
-					left_motor_power(0); 	
-					right_motor_power(0);
-					if(dir_coef < 1 - DIRECTION_TOLERANCE)
-					{
-						direction(0, 1);
-						left_motor_power(SPEED); 	
-						right_motor_power(SPEED);
-					}
-					
-					get_values(&vRecleft, &vRecright, &dir_coef, &dist);
-					if(dir_coef > 1 + DIRECTION_TOLERANCE)
-					{
-						direction(1, 0);
-						left_motor_power(SPEED); 	
-						right_motor_power(SPEED);
-					
-					}
-					get_values(&vRecleft, &vRecright, &dir_coef, &dist);
-					printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
-				}
-					
-				while(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE || dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE)
-				{
-				 
-					left_motor_power(0); 	
-					right_motor_power(0);
-					if(dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE )
+					while(dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE )
 					{
 						direction(0, 0);
 						left_motor_power(SPEED); 	
 						right_motor_power(SPEED);
+						get_values(&vRecleft,&vRecright,&dir_coef,&dist);
+						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
 					}
-					get_values(&vRecleft,&vRecright,&dir_coef,&dist);
-					if(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE)
+					while(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE)
 					{	
 						direction(1, 1);
 						left_motor_power(SPEED); 	
 						right_motor_power(SPEED);
+						get_values(&vRecleft,&vRecright,&dir_coef,&dist);
+						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
 					}
-					get_values(&vRecleft,&vRecright,&dir_coef,&dist);
-					printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+					while(dir_coef < 1 - DIRECTION_TOLERANCE)
+					{
+						direction(0, 1);
+						left_motor_power(SPEED); 	
+						right_motor_power(SPEED);
+						get_values(&vRecleft, &vRecright, &dir_coef, &dist);
+						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+					}
+					while(dir_coef > 1 + DIRECTION_TOLERANCE)
+					{
+						direction(1, 0);
+						left_motor_power(SPEED); 	
+						right_motor_power(SPEED);
+						get_values(&vRecleft, &vRecright, &dir_coef, &dist);
+						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+					}
 				}
-				left_motor_power(0); 	
-				right_motor_power(0);
 			}
 		}
+		/*
 		else if(extern0_flag)
 		{
 			printf("\nExternal interrupt 0 triggered\n");
@@ -667,7 +704,7 @@ void main(void){
 			extern1_flag = 0;
 			left_motor_power(0);
 			right_motor_power(0);
-		}
+		}*/
 		
 	}
 }
