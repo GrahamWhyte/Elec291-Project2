@@ -513,6 +513,41 @@ void main (void)
 			TR2 = 0;
 			printf("\nControl!\n");
 		}
+	else if(but2)
+	  	{
+	  
+		  	printf("\nTracking Mode!\n");
+		  	Timer4ms(50);
+			while(but2)
+			{
+				nunchuck_getdata(rbuf);
+		 		but2=!((rbuf[5] & 0x02)?1:0);
+		 		Timer4ms(50);
+			}
+			OUT1 = 0;
+			OUT0 = 0;
+			TR2 = 0;
+			printf("\nTracking Mode!\n");
+			Timer4ms(50);
+	    	while(!but2)
+			{
+			nunchuck_getdata(rbuf);
+		 	but2=!((rbuf[5] & 0x02)?1:0);
+		 	Timer4ms(50);
+			}
+			printf("\nTracking Mode!\n");
+			Timer4ms(50);
+			while(but2)
+			{
+				nunchuck_getdata(rbuf);
+		 		but2=!((rbuf[5] & 0x02)?1:0);
+		 		Timer4ms(50);
+			}
+			OUT1 =0;
+			OUT0 = 0;
+			TR2 = 0;
+			printf("\nControl!\n");
+		}
 	else
 	{
 			
