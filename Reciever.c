@@ -10,6 +10,8 @@
 #define  LEFT_BACKWARD   P2_4
 #define  RIGHT_BACKWARD  P2_2
 
+#define IR_PIN P0_2 
+
 #define SIGNAL_IN P1_7 ///where ever the signal comes in from receiver
 #define LEFT_DISTANCE P2_0 
 #define RIGHT_DISTANCE P2_1 
@@ -39,7 +41,7 @@ volatile unsigned char signal[SIGNAL_SIZE];
 volatile unsigned char pwm_count;
 volatile unsigned char LF, LB, RF, RB, signal_counter, start_counter, interrupt_counter;
 volatile bit right_motor, back_right_motor, left_motor, back_left_motor, mode; 
-volatile bit buffer_full, flag, extern0_flag, extern1_flag;
+volatile bit buffer_full, flag, extern0_flag, extern1_flag, other_button;
 volatile int sum;
 volatile int l;
 
@@ -170,12 +172,11 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 	if(interrupt_counter < 10)
 	{
 		interrupt_counter++;
-		sum += SIGNAL_IN;
-		//P0_2 = !P0_2;
+		sum += IR_PIN ^ SIGNAL_IN;
+		
 	}
 	else
 	{
-		P0_2 = !P0_2;
 	
 		interrupt_counter = 0;
 		
@@ -185,11 +186,11 @@ void Timer5_ISR (void) interrupt INTERRUPT_TIMER5
 		{
 			if(!flag)
 			{
-				if (SIGNAL_IN) 
+				if (SIGNAL_IN ^ IR_PIN) 
 					start_counter++; 
 				else 
 					start_counter=0; 
-					
+				
 				if (start_counter>START_SIZE-1)	//sorta worked at >= 11, so Iunno.
 				{
 					flag = 1;
@@ -498,7 +499,7 @@ void main(void){
     int i; 
 	float vRecleft = 0, vRecright= 0, dir_coef = 0, dist= 0;
     int left_power = 0, right_power = 0;
-    bit left_dir = 1, right_dir = 1, other_button = 0;
+    bit left_dir = 1, right_dir = 1;
     int power;
     int flaaag = 0;
     unsigned char page_save;
@@ -526,6 +527,7 @@ void main(void){
 	interrupt_counter = 0;
 	extern0_flag = 0;
 	extern1_flag = 0;
+	other_button = 0;
 	
 	sum = 0;
 	power = 0;
