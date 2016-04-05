@@ -508,6 +508,8 @@ void main(void){
     //int testArray[32];
   	
   	SIGNAL_IN = 0;
+  	P2_0 = 0;
+  	P2_1 = 0;
     
 	//initialization
 	_c51_external_startup();
@@ -609,9 +611,7 @@ void main(void){
 			
 			
 			if(mode == JOYSTICK)
-			{
-			
-				printf("PING!!!!");				
+			{				
 				direction(left_dir, right_dir); 
 						
 		        left_motor_power(power); 
@@ -635,6 +635,8 @@ void main(void){
 				printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
 				while(dir_coef < 1- DIRECTION_TOLERANCE || dir_coef > 1 + DIRECTION_TOLERANCE || dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE || dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE)
 				{
+					if(mode)
+					{
 					while(dist < TRACKING_VOLTAGE - TRACKING_TOLERANCE )
 					{
 						direction(0, 0);
@@ -642,7 +644,19 @@ void main(void){
 						right_motor_power(SPEED);
 						get_values(&vRecleft,&vRecright,&dir_coef,&dist);
 						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+						if(buffer_full)
+						{
+							buffer_full = 0; 
+							if (!signal[1]) 
+							{
+								mode = 0; 
+								break;
+							}
+						}
 					}
+					}
+					if(mode) 
+					{
 					while(dist > TRACKING_VOLTAGE + TRACKING_TOLERANCE)
 					{	
 						direction(1, 1);
@@ -650,7 +664,19 @@ void main(void){
 						right_motor_power(SPEED);
 						get_values(&vRecleft,&vRecright,&dir_coef,&dist);
 						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+						if(buffer_full)
+						{
+							buffer_full = 0; 
+							if (!signal[1]) 
+							{
+								mode = 0; 
+								break;
+							}
+						}
 					}
+					}
+					if(mode)
+					{
 					while(dir_coef < 1 - DIRECTION_TOLERANCE)
 					{
 						direction(0, 1);
@@ -658,7 +684,19 @@ void main(void){
 						right_motor_power(SPEED);
 						get_values(&vRecleft, &vRecright, &dir_coef, &dist);
 						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+						if(buffer_full)
+						{
+							buffer_full = 0; 
+							if (!signal[1]) 
+							{
+								mode = 0; 
+								break;
+							}
+						}
 					}
+					}
+					if(mode)
+					{
 					while(dir_coef > 1 + DIRECTION_TOLERANCE)
 					{
 						direction(1, 0);
@@ -666,7 +704,19 @@ void main(void){
 						right_motor_power(SPEED);
 						get_values(&vRecleft, &vRecright, &dir_coef, &dist);
 						printf("%f %f %f %f %u %u %u %u\r",vRecleft, vRecright,dir_coef, dist, RF, RB, LF, LB);
+						if(buffer_full)
+						{
+							buffer_full = 0; 
+							if (!signal[1]) 
+							{
+								mode = 0; 
+								break;
+							}
+						}
+						
 					}
+					}
+				if(!mode) break;	
 				}
 			}
 		}
